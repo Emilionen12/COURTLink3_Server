@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Court Link</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{--g:#00E676;--gd:#00C853;--d:#0A0A0A;--k:#141414;--k2:#1C1C1C;--r:#272727;--t:#F0F0F0;--tg:#777;--rot:#FF4444;--gold:#FFD700;--silber:#C0C0C0;--bronze:#CD7F32;--gast:#FF9800}
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    html,body{height:100%;overflow:hidden}
+    body{background:var(--d);color:var(--t);font-family:'DM Sans',sans-serif;display:flex;flex-direction:column}
+    .screen{display:none;flex-direction:column;height:100%;overflow:hidden}
+    .screen.aktiv{display:flex}
+
+    /* ── Login ─────────────────────────────────────────────────── */
+    #s-login{justify-content:center;align-items:center;padding:24px;overflow-y:auto}
+    .login-box{width:100%;max-width:400px}
+    .logo-gross{font-family:'Bebas Neue',sans-serif;font-size:52px;letter-spacing:4px;color:var(--g);text-align:center;margin-bottom:2px}
+    .logo-sub{text-align:center;color:var(--tg);font-size:12px;letter-spacing:3px;margin-bottom:28px}
+    .login-tabs{display:flex;background:var(--k2);border-radius:12px;padding:4px;gap:4px;margin-bottom:18px}
+    .login-tab{flex:1;padding:9px 4px;text-align:center;font-size:11px;font-weight:600;cursor:pointer;color:var(--tg);border-radius:9px;transition:.2s}
+    .login-tab.aktiv{background:var(--g);color:var(--d)}
+    .pw-section{background:var(--k2);border:1px solid var(--r);border-radius:10px;padding:12px;margin-bottom:8px}
+    .pw-section-label{font-size:10px;font-weight:700;color:var(--tg);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+
+    /* ── App Header ─────────────────────────────────────────────── */
+    .app-header{background:var(--k);border-bottom:1px solid var(--r);padding:13px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+    .header-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--g)}
+    .header-team{font-size:11px;color:var(--tg);margin-top:1px}
+    .code-badge{background:var(--r);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--g);letter-spacing:2px;cursor:pointer;transition:.15s}
+    .code-badge:active{background:var(--g);color:var(--d)}
+    .btn-header{background:transparent;color:var(--tg);border:1px solid var(--r);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:12px;padding:5px 10px;cursor:pointer}
+
+    /* ── Bottom Nav ─────────────────────────────────────────────── */
+    .bottom-nav{display:flex;background:var(--k);border-top:1px solid var(--r);flex-shrink:0}
+    .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:9px 4px 7px;cursor:pointer;color:var(--tg);font-size:10px;font-weight:500;gap:3px;transition:.2s;user-select:none}
+    .nav-item.aktiv{color:var(--g)}
+    .nav-icon{font-size:19px;line-height:1}
+
+    /* ── Pages ──────────────────────────────────────────────────── */
+    .page{display:none;flex:1;overflow-y:auto;padding:18px}
+    .page.aktiv{display:block}
+
+    /* ── Karten ─────────────────────────────────────────────────── */
+    .karte{background:var(--k);border:1px solid var(--r);border-radius:16px;padding:16px;margin-bottom:14px}
+    .karte-titel{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:1px;color:var(--g);margin-bottom:14px}
+
+    /* ── Inputs ─────────────────────────────────────────────────── */
+    input[type=text],input[type=number],input[type=password]{width:100%;background:var(--k2);border:1px solid var(--r);border-radius:10px;color:var(--t);font-family:'DM Sans',sans-serif;font-size:14px;padding:11px 13px;outline:none;transition:.2s;margin-bottom:8px}
+    input:focus{border-color:var(--g)}
+    input::placeholder{color:var(--tg)}
+    .row{display:flex;gap:8px}
+    .row input{margin-bottom:0}
+    .pw-wrap{position:relative;margin-bottom:8px}
+    .pw-wrap input{margin-bottom:0;padding-right:44px}
+    .pw-auge{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--tg);font-size:16px;padding:4px}
+
+    /* ── Buttons ─────────────────────────────────────────────────── */
+    .btn{background:var(--g);color:var(--d);border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;padding:12px 18px;cursor:pointer;width:100%;transition:.15s;margin-top:6px}
+    .btn:active{transform:scale(.97);background:var(--gd)}
+    .btn-rot{background:var(--rot)!important}
+    .btn-rot:active{background:#cc0000!important}
+    .btn-ghost{background:transparent;color:var(--tg);border:1px solid var(--r);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;padding:5px 11px;cursor:pointer;transition:.15s;white-space:nowrap}
+    .btn-ghost:hover{color:var(--rot);border-color:var(--rot)}
+    .btn-outline{background:transparent;color:var(--g);border:1px solid var(--g);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;padding:10px;cursor:pointer;width:100%;transition:.15s;margin-top:4px}
+    .btn-outline:active{background:rgba(0,230,118,.1)}
+    .btn-sm{padding:7px 13px;font-size:12px;width:auto;margin-top:0}
+    .btn-gast{background:rgba(255,152,0,.15);color:var(--gast);border:1px solid rgba(255,152,0,.3);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;padding:10px;cursor:pointer;width:100%;transition:.15s;margin-top:6px}
+    .btn-gast:active{background:rgba(255,152,0,.25)}
+
+    /* ── Modus ──────────────────────────────────────────────────── */
+    .modus-gruppe{display:flex;gap:8px;margin-bottom:14px}
+    .modus-btn{flex:1;background:var(--k2);color:var(--tg);border:1px solid var(--r);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:10px 6px;cursor:pointer;text-align:center;transition:.2s;line-height:1.5}
+    .modus-btn.aktiv{background:var(--g);color:var(--d);border-color:var(--g)}
+
+    /* ── Spieler Items ──────────────────────────────────────────── */
+    .spieler-item{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;background:var(--k2);border-radius:10px;margin-bottom:8px;animation:ein .25s ease;gap:8px}
+    @keyframes ein{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+    .sp-links{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+    .avatar{width:34px;height:34px;border-radius:50%;background:var(--g);color:var(--d);font-family:'Bebas Neue',sans-serif;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .avatar.gast{background:var(--gast)}
+    .sp-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .sp-sub{font-size:11px;color:var(--tg)}
+    .gast-badge{display:inline-block;background:rgba(255,152,0,.15);color:var(--gast);border:1px solid rgba(255,152,0,.3);border-radius:4px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:5px;vertical-align:middle}
+    .spieler-item input[type=checkbox]{width:18px;height:18px;accent-color:var(--g);cursor:pointer;flex-shrink:0}
+    .spieler-item.selected{border:1px solid rgba(0,230,118,.3);background:rgba(0,230,118,.05)}
+
+    /* ── Matches / Turnier ──────────────────────────────────────── */
+    .runde-header{background:rgba(0,230,118,.07);border:1px solid rgba(0,230,118,.15);border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+    .runde-label{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;color:var(--g)}
+    .runde-sub{font-size:11px;color:var(--tg)}
+    .match-karte{background:var(--k2);border:1px solid var(--r);border-radius:12px;padding:14px;margin-bottom:10px;animation:ein .3s ease}
+    .match-nr{font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:1px;color:var(--tg);margin-bottom:10px}
+    .match-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;margin-bottom:12px}
+    .match-team{display:flex;flex-direction:column;gap:5px}
+    .match-team.r{align-items:flex-end}
+    .match-sp{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500}
+    .match-sp.r{flex-direction:row-reverse}
+    .vs{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--tg);text-align:center}
+    .ergebnis-row{display:flex;gap:8px;align-items:center;justify-content:center}
+    .ergebnis-row input{width:56px;text-align:center;margin-bottom:0;padding:8px 4px;font-size:18px;font-weight:700}
+    .ergebnis-div{font-size:16px;color:var(--tg);font-weight:700}
+    .match-score{font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--g);text-align:center;letter-spacing:4px}
+
+    /* ── Verlauf ────────────────────────────────────────────────── */
+    .verlauf-runde{font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--tg);letter-spacing:1px;margin:10px 0 6px}
+    .verlauf-zeile{display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--r)}
+    .verlauf-zeile:last-child{border-bottom:none}
+    .verlauf-score{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--g);letter-spacing:2px;flex-shrink:0;margin:0 8px}
+
+    /* ── Ranking ────────────────────────────────────────────────── */
+    .rang-item{display:flex;align-items:center;padding:11px 13px;background:var(--k2);border-radius:10px;margin-bottom:8px;gap:10px}
+    .rang-nr{font-family:'Bebas Neue',sans-serif;font-size:19px;width:26px;text-align:center;flex-shrink:0}
+    .rang-pkt{margin-left:auto;text-align:right;flex-shrink:0}
+    .rang-pkt-zahl{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--g)}
+    .rang-pkt-label{font-size:10px;color:var(--tg)}
+
+    /* ── Claim Modal ────────────────────────────────────────────── */
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:flex-end;justify-content:center;z-index:500;opacity:0;pointer-events:none;transition:.25s}
+    .modal-bg.offen{opacity:1;pointer-events:all}
+    .modal{background:var(--k);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;transform:translateY(40px);transition:.25s}
+    .modal-bg.offen .modal{transform:translateY(0)}
+    .modal-titel{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;color:var(--g);margin-bottom:14px}
+    .modal-x{float:right;background:transparent;border:none;color:var(--tg);font-size:20px;cursor:pointer;line-height:1;margin-top:-2px}
+    .claim-box{background:rgba(255,152,0,.08);border:1px solid rgba(255,152,0,.25);border-radius:10px;padding:14px;margin:12px 0}
+    .claim-code{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:5px;color:var(--gast);text-align:center;margin:6px 0}
+    .claim-hint{font-size:11px;color:var(--tg);text-align:center;line-height:1.6}
+
+    /* ── Hilfsklassen ───────────────────────────────────────────── */
+    .meldung{padding:9px 13px;border-radius:8px;font-size:13px;margin-bottom:8px;display:none}
+    .meldung.fehler{background:rgba(255,68,68,.12);color:#FF8A80;border:1px solid rgba(255,68,68,.3)}
+    .meldung.erfolg{background:rgba(0,230,118,.1);color:var(--g);border:1px solid rgba(0,230,118,.25)}
+    .leer{text-align:center;color:var(--tg);padding:32px 20px;font-size:13px;line-height:1.8}
+    .sec{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .sec-titel{font-size:11px;font-weight:600;color:var(--tg);letter-spacing:.5px;text-transform:uppercase}
+    .badge{background:var(--r);color:var(--tg);font-size:11px;padding:2px 9px;border-radius:20px}
+    .div{border:none;border-top:1px solid var(--r);margin:12px 0}
+    .home-stat{display:flex;justify-content:space-around;padding:4px 0 8px}
+    .stat-zahl{font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--g);text-align:center}
+    .stat-label{font-size:11px;color:var(--tg);text-align:center}
+    .status-pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700}
+    .s-aktiv{background:rgba(0,230,118,.15);color:var(--g)}
+    .s-gespielt{background:rgba(0,230,118,.15);color:var(--g)}
+    .s-offen{background:rgba(119,119,119,.15);color:var(--tg)}
+    .hinweis{font-size:11px;color:var(--tg);margin-top:-4px;margin-bottom:8px}
+    .info-box{background:rgba(0,230,118,.06);border:1px solid rgba(0,230,118,.15);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--tg);line-height:1.7}
+    .info-box strong{color:var(--g)}
+    .toast{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);background:var(--g);color:var(--d);padding:8px 20px;border-radius:20px;font-size:13px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:999;white-space:nowrap}
+    .toast.show{opacity:1}
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  LOGIN                                                      -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div id="s-login" class="screen aktiv">
+  <div class="login-box">
+    <div class="logo-gross">Court Link</div>
+    <div class="logo-sub">PADEL · TEAM MANAGER</div>
+
+    <div class="login-tabs">
+      <div class="login-tab aktiv" onclick="loginTab('erstellen',this)">Erstellen</div>
+      <div class="login-tab" onclick="loginTab('einloggen',this)">Einloggen</div>
+      <div class="login-tab" onclick="loginTab('beitreten',this)">Beitreten</div>
+      <div class="login-tab" onclick="loginTab('uebernehmen',this)">Übernehmen</div>
+    </div>
+
+    <!-- Team erstellen -->
+    <div id="lf-erstellen">
+      <input type="text" id="l-teamname" placeholder="Team-Name (z.B. Padel Kings)">
+      <div class="pw-section">
+        <div class="pw-section-label">🔒 Team schützen</div>
+        <div class="pw-wrap" style="margin-bottom:0">
+          <input type="password" id="l-team-pw1" placeholder="Team-Passwort (mind. 4 Zeichen)">
+          <button class="pw-auge" onclick="togglePw('l-team-pw1',this)" tabindex="-1">👁</button>
+        </div>
+      </div>
+      <div class="pw-section">
+        <div class="pw-section-label">👤 Dein Account</div>
+        <div class="row" style="margin-bottom:8px">
+          <input type="text" id="l-name1" placeholder="Dein Name" style="margin-bottom:0">
+          <input type="text" id="l-alias1" placeholder="Alias (opt.)" style="margin-bottom:0">
+        </div>
+        <div class="pw-wrap" style="margin-bottom:0">
+          <input type="password" id="l-pw1" placeholder="Account-Passwort (mind. 4 Zeichen)">
+          <button class="pw-auge" onclick="togglePw('l-pw1',this)" tabindex="-1">👁</button>
+        </div>
+      </div>
+      <div id="m-l1" class="meldung"></div>
+      <button class="btn" onclick="teamErstellen()">Team erstellen</button>
+    </div>
+
+    <!-- Einloggen -->
+    <div id="lf-einloggen" style="display:none">
+      <input type="text" id="l-code-e" placeholder="Team-Code" style="text-transform:uppercase;letter-spacing:2px">
+      <div class="pw-wrap">
+        <input type="password" id="l-team-pw-e" placeholder="Team-Passwort">
+        <button class="pw-auge" onclick="togglePw('l-team-pw-e',this)" tabindex="-1">👁</button>
+      </div>
+      <input type="text" id="l-name-e" placeholder="Dein Name">
+      <div class="pw-wrap">
+        <input type="password" id="l-pw-e" placeholder="Account-Passwort">
+        <button class="pw-auge" onclick="togglePw('l-pw-e',this)" tabindex="-1">👁</button>
+      </div>
+      <div id="m-l2" class="meldung"></div>
+      <button class="btn" onclick="einloggen()">Einloggen</button>
+    </div>
+
+    <!-- Beitreten -->
+    <div id="lf-beitreten" style="display:none">
+      <input type="text" id="l-code-b" placeholder="Team-Code" style="text-transform:uppercase;letter-spacing:2px">
+      <div class="pw-wrap">
+        <input type="password" id="l-team-pw-b" placeholder="Team-Passwort">
+        <button class="pw-auge" onclick="togglePw('l-team-pw-b',this)" tabindex="-1">👁</button>
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <input type="text" id="l-name-b" placeholder="Dein Name" style="margin-bottom:0">
+        <input type="text" id="l-alias-b" placeholder="Alias (opt.)" style="margin-bottom:0">
+      </div>
+      <div class="pw-wrap">
+        <input type="password" id="l-pw-b" placeholder="Account-Passwort (mind. 4 Zeichen)">
+        <button class="pw-auge" onclick="togglePw('l-pw-b',this)" tabindex="-1">👁</button>
+      </div>
+      <div id="m-l3" class="meldung"></div>
+      <button class="btn" onclick="teamBeitreten()">Registrieren & beitreten</button>
+    </div>
+
+    <!-- Gast übernehmen -->
+    <div id="lf-uebernehmen" style="display:none">
+      <p style="font-size:13px;color:var(--tg);margin-bottom:14px;line-height:1.6">
+        Du hast einen <span style="color:var(--gast)">Claim-Code</span>?
+        Übernimm deinen Account — alle Punkte bleiben erhalten!
+      </p>
+      <input type="text" id="l-claim" placeholder="Claim-Code" style="text-transform:uppercase;letter-spacing:2px">
+      <div class="row" style="margin-bottom:8px">
+        <input type="text" id="l-name-u" placeholder="Dein Name" style="margin-bottom:0">
+        <input type="text" id="l-alias-u" placeholder="Alias (opt.)" style="margin-bottom:0">
+      </div>
+      <div class="pw-wrap">
+        <input type="password" id="l-pw-u" placeholder="Neues Account-Passwort (mind. 4 Zeichen)">
+        <button class="pw-auge" onclick="togglePw('l-pw-u',this)" tabindex="-1">👁</button>
+      </div>
+      <div id="m-l4" class="meldung"></div>
+      <button class="btn" style="background:var(--gast)" onclick="gastUebernehmen()">Account übernehmen</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  APP                                                        -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div id="s-app" class="screen">
+
+  <div class="app-header">
+    <div>
+      <div class="header-logo">Court Link</div>
+      <div class="header-team" id="h-teamname">—</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="code-badge" id="h-code" onclick="codekopieren()">——</div>
+      <button class="btn-header" onclick="if(confirm('Möchtest du dich wirklich abmelden?')) abmelden()">↩</button>
+    </div>
+  </div>
+
+  <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+
+    <!-- HOME ──────────────────────────────────────────────────── -->
+    <div id="p-home" class="page aktiv">
+      <div class="karte">
+        <div class="karte-titel">Übersicht</div>
+        <div class="home-stat">
+          <div><div class="stat-zahl" id="h-spieler">0</div><div class="stat-label">Spieler</div></div>
+          <div><div class="stat-zahl" id="h-matches">0</div><div class="stat-label">Matches</div></div>
+          <div><div class="stat-zahl" id="h-status">—</div><div class="stat-label">Turnier</div></div>
+        </div>
+      </div>
+      <div class="karte">
+        <div class="karte-titel">Top 3</div>
+        <div id="h-top3"><div class="leer">Noch keine Spiele.</div></div>
+        <hr class="div">
+        <button class="btn-outline" onclick="zeigeSeite('ranking')">Vollständiges Ranking →</button>
+      </div>
+      <div class="karte">
+        <div class="karte-titel">Aktives Turnier</div>
+        <div id="h-spieltag"><div class="leer">Kein aktives Turnier</div></div>
+        <button class="btn-outline" onclick="zeigeSeite('spieltag')" style="margin-top:10px">Turnier starten →</button>
+      </div>
+      <div class="karte">
+        <div class="karte-titel">Court Link Beta</div>
+        <p class="hinweis">Court Link ist noch in der Entwicklung und befindet sich gerade in einer Testlaufzeit. Es können Fehler auftreten und Funktionen können fehlerhaft sein oder sich ändern.</p>
+        <p class="hinweis">Teste die neuesten Funktionen von Court Link. Dein Feedback hilft uns, unsere Website weiter zu entwickeln.</p>
+      </div>
+    </div>
+
+    <!-- SPIELER ───────────────────────────────────────────────── -->
+    <div id="p-spieler" class="page">
+      <div class="karte">
+        <div class="karte-titel">Gast hinzufügen</div>
+        <p class="hinweis">Gäste können später per Claim-Code einen eigenen Account erstellen und dabei ihre Punkte behalten.</p>
+        <div class="row">
+          <input type="text" id="sp-name" placeholder="Name">
+          <input type="text" id="sp-alias" placeholder="Alias (opt.)">
+        </div>
+        <div id="m-sp" class="meldung"></div>
+        <button class="btn-gast" onclick="spielerAdd()">+ Als Gast hinzufügen</button>
+      </div>
+      <div class="karte">
+        <div class="sec">
+          <span class="sec-titel">Alle Spieler</span>
+          <span class="badge" id="sp-anzahl">0</span>
+        </div>
+        <div id="spieler-liste"><div class="leer">Noch keine Spieler.</div></div>
+      </div>
+    </div>
+
+    <!-- SPIELTAG ──────────────────────────────────────────────── -->
+    <div id="p-spieltag" class="page">
+
+      <!-- Turnier starten -->
+      <div id="st-start" class="karte">
+        <div class="karte-titel">Neues Turnier</div>
+        <div class="info-box">
+          <strong>Round-Robin</strong><br>
+          Aus den Spielern werden 2er-Teams gebildet. Jedes Team spielt einmal gegen jedes andere.
+          Runde 2 startet automatisch sobald alle Spiele aus Runde 1 eingetragen sind.
+        </div>
+        
+        <strong>Modi zur Team-Bildung</strong><br>
+        <strong>🎲 Zufällig:</strong> Die Teams werden zufällig ausgelost.<br>
+        ö<strong>⚖️ Ranked:</strong> Starke und schwache spieler werden in teams aufgeteilt. Dabei wird abernicht nur nach Punkten sortiert, sondern auch mit einem Zufallsfktor gearbeitet.<br>
+        <div class="sec-titel" style="margin-bottom:8px">Team-Bildung</div>
+        <div class="modus-gruppe">
+          <div class="modus-btn aktiv" id="mb-random" onclick="modusWaehlen('random')">🎲 Zufällig</div>
+          <div class="modus-btn" id="mb-ranked" onclick="modusWaehlen('ranked')">⚖️ Ranked<br><span style="font-size:10px;opacity:.7">Stark + Schwach</span></div>
+        </div>
+        <div class="sec" style="margin-top:4px">
+          <span class="sec-titel">Spieler auswählen</span>
+          <span class="badge" id="st-anzahl">0</span>
+        </div>
+        <p class="hinweis">Mind. 4 Spieler (gerade Anzahl).</p>
+        <div id="st-liste"><div class="leer">Erst Spieler hinzufügen.</div></div>
+        <div id="m-st" class="meldung"></div>
+        <button class="btn" onclick="spieltagStarten()" style="margin-top:10px">Turnier starten</button>
+        
+
+      </div>
+
+      <!-- Aktives Turnier -->
+      <div id="st-aktiv" style="display:none">
+        <div class="karte">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div class="karte-titel" style="margin:0">Turnier</div>
+            <span class="status-pill s-aktiv">LÄUFT</span>
+          </div>
+
+          <!-- Aktuelle Runde -->
+          <div id="st-runde-header" class="runde-header">
+            <div>
+              <div class="runde-label" id="st-runde-label">Runde 1</div>
+              <div class="runde-sub" id="st-runde-sub"></div>
+            </div>
+            <div id="st-runde-pill" class="runde-pill"></div>
+          </div>
+          <div id="st-matches"></div>
+
+          <!-- Bisherige Runden -->
+          <div id="st-verlauf-box">
+            <hr class="div">
+            <div class="sec-titel" style="margin-bottom:8px">Bisherige Ergebnisse</div>
+            <div id="st-verlauf"></div>
+          </div>
+
+          <hr class="div">
+          <div id="st-team-ranking-box">
+            <hr class="div">
+            <div class="sec-titel" style="margin-bottom:8px">Team Ranking (Spieltag)</div>
+            <div id="st-team-ranking">
+              <div class="leer" style="padding:10px 0">Noch keine Matches gespielt.</div>
+            </div>
+          </div>
+          <hr class="div">
+          <button class="btn btn-rot" onclick="spieltagBeenden()">Turnier beenden</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RANKING ───────────────────────────────────────────────── -->
+    <div id="p-ranking" class="page">
+      <div class="karte">
+        <div class="karte-titel">Ranking</div>
+        <div style="font-size:11px;color:var(--tg);margin-bottom:12px">Sieg +3 · Unentschieden +1 · Niederlage +0</div>
+        <div id="ranking-liste"><div class="leer">Noch keine Spiele.</div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item aktiv" onclick="zeigeSeite('home')"><div class="nav-icon">🏠</div>Home</div>
+    <div class="nav-item" onclick="zeigeSeite('spieler')"><div class="nav-icon">👥</div>Spieler</div>
+    <div class="nav-item" onclick="zeigeSeite('spieltag')"><div class="nav-icon">🎾</div>Turnier</div>
+    <div class="nav-item" onclick="zeigeSeite('ranking')"><div class="nav-icon">🏆</div>Ranking</div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  CLAIM MODAL                                                -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-bg" onclick="modalZu()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <button class="modal-x" onclick="modalZu()">✕</button>
+    <div class="modal-titel">Gast-Code</div>
+    <p style="font-size:13px;color:var(--tg);line-height:1.6">
+      Schick diesen Code an <strong id="modal-name" style="color:var(--t)">den Spieler</strong>.
+      In der App auf <strong style="color:var(--g)">"Übernehmen"</strong> tippen und Code eingeben.
+    </p>
+    <div class="claim-box">
+      <div style="font-size:10px;color:var(--tg);text-align:center;letter-spacing:1px">CLAIM-CODE</div>
+      <div class="claim-code" id="modal-code">——</div>
+      <div class="claim-hint">Alle bisherigen Punkte bleiben erhalten!</div>
+    </div>
+    <button class="btn" onclick="claimTeilen()">Nachricht kopieren & teilen</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  JAVASCRIPT                                                 -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<script>
+
+let Z = { team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random' }
+
+// ── Hilfs ────────────────────────────────────────────────────────
+function toast(t) {
+  const el = document.getElementById('toast')
+  el.textContent = t
+  el.classList.add('show')
+  setTimeout(() => el.classList.remove('show'), 2200)
+}
+
+function meldung(id, text, typ) {
+  const el = document.getElementById(id)
+  el.textContent = text
+  el.className = 'meldung ' + typ
+  el.style.display = 'block'
+  setTimeout(() => el.style.display = 'none', 3500)
+}
+
+function togglePw(id, btn) {
+  const inp = document.getElementById(id)
+  inp.type = inp.type === 'password' ? 'text' : 'password'
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈'
+}
+
+function modalAuf(sp) {
+  document.getElementById('modal-name').textContent = sp.alias
+  document.getElementById('modal-code').textContent = sp.claim_code
+  document.getElementById('modal-bg').classList.add('offen')
+}
+function modalZu() { document.getElementById('modal-bg').classList.remove('offen') }
+
+function claimTeilen() {
+  const code = document.getElementById('modal-code').textContent
+  const name = document.getElementById('modal-name').textContent
+  navigator.clipboard.writeText(
+    `Hey ${name}! Du wurdest zu unserem Padel-Team hinzugefügt 🎾\n\n` +
+    `So erstellst du deinen Account:\n` +
+    `1. Öffne die Court Link App\n` +
+    `2. Tippe auf den Tab "Übernehmen"\n` +
+    `3. Gib deinen Code ein: ${code}\n` +
+    `4. Wähle einen Namen und ein Passwort\n\n` +
+    `Deine bisherigen Punkte sind bereits gespeichert! 🏆`
+  )
+  toast('Nachricht kopiert!')
+}
+
+// ── Login Tabs ───────────────────────────────────────────────────
+function loginTab(welche, el) {
+  document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('aktiv'))
+  el.classList.add('aktiv')
+  ;['erstellen','einloggen','beitreten','uebernehmen'].forEach(n =>
+    document.getElementById('lf-'+n).style.display = n === welche ? 'block' : 'none'
+  )
+}
+
+// ── API Helper ───────────────────────────────────────────────────
+async function post(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  return [res, await res.json()]
+}
+
+// ── Team erstellen ───────────────────────────────────────────────
+async function teamErstellen() {
+  const team_name    = document.getElementById('l-teamname').value.trim()
+  const team_pw      = document.getElementById('l-team-pw1').value
+  const spieler_name = document.getElementById('l-name1').value.trim()
+  const alias        = document.getElementById('l-alias1').value.trim()
+  const passwort     = document.getElementById('l-pw1').value
+
+  if (!team_name || !team_pw || !spieler_name || !passwort) {
+    meldung('m-l1', 'Alle Felder ausfüllen.', 'fehler'); return
+  }
+  const [res, d] = await post('/api/team/erstellen', { team_name, team_passwort: team_pw, spieler_name, alias, passwort })
+  if (!res.ok) { meldung('m-l1', d.fehler, 'fehler'); return }
+  appStarten(d.team, d.spieler.id)
+}
+
+// ── Einloggen ────────────────────────────────────────────────────
+async function einloggen() {
+  const code      = document.getElementById('l-code-e').value.trim()
+  const team_pw   = document.getElementById('l-team-pw-e').value
+  const name      = document.getElementById('l-name-e').value.trim()
+  const passwort  = document.getElementById('l-pw-e').value
+
+  if (!code || !team_pw || !name || !passwort) {
+    meldung('m-l2', 'Alle Felder ausfüllen.', 'fehler'); return
+  }
+  const [res, d] = await post('/api/einloggen', { code, team_passwort: team_pw, spieler_name: name, passwort })
+  if (!res.ok) { meldung('m-l2', d.fehler, 'fehler'); return }
+  appStarten(d.team, d.spieler.id)
+}
+
+// ── Beitreten ────────────────────────────────────────────────────
+async function teamBeitreten() {
+  const code      = document.getElementById('l-code-b').value.trim()
+  const team_pw   = document.getElementById('l-team-pw-b').value
+  const name      = document.getElementById('l-name-b').value.trim()
+  const alias     = document.getElementById('l-alias-b').value.trim()
+  const passwort  = document.getElementById('l-pw-b').value
+
+  if (!code || !team_pw || !name || !passwort) {
+    meldung('m-l3', 'Alle Felder ausfüllen.', 'fehler'); return
+  }
+  const [res, d] = await post('/api/team/beitreten', { code, team_passwort: team_pw, spieler_name: name, alias, passwort })
+  if (!res.ok) { meldung('m-l3', d.fehler, 'fehler'); return }
+  appStarten(d.team, d.spieler.id)
+}
+
+// ── Gast übernehmen ──────────────────────────────────────────────
+async function gastUebernehmen() {
+  const claim_code = document.getElementById('l-claim').value.trim()
+  const name       = document.getElementById('l-name-u').value.trim()
+  const alias      = document.getElementById('l-alias-u').value.trim()
+  const passwort   = document.getElementById('l-pw-u').value
+
+  if (!claim_code || !name || !passwort) {
+    meldung('m-l4', 'Alle Felder ausfüllen.', 'fehler'); return
+  }
+  const [res, d] = await post('/api/gast/uebernehmen', { claim_code, spieler_name: name, alias, passwort })
+  if (!res.ok) { meldung('m-l4', d.fehler, 'fehler'); return }
+  appStarten(d.team, d.spieler.id)
+  toast('Account übernommen! Deine Punkte sind erhalten. 🎉')
+}
+
+// ── App starten ──────────────────────────────────────────────────
+function appStarten(team, sid) {
+  Z.team = team
+  Z.spieler_id = sid
+
+  const teamNameEl = document.getElementById('h-teamname')
+  const codeEl     = document.getElementById('h-code')
+
+  if (teamNameEl) teamNameEl.textContent = team.name
+  if (codeEl)     codeEl.textContent     = team.code
+
+  document.getElementById('s-login').classList.remove('aktiv')
+  document.getElementById('s-app').classList.add('aktiv')
+  allesDaten()
+}
+
+async function abmelden() {
+  await fetch('/api/abmelden', { method: 'POST' })
+  Z = { team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random' }
+  document.getElementById('s-app').classList.remove('aktiv')
+  document.getElementById('s-login').classList.add('aktiv')
+}
+
+function codekopieren() {
+  navigator.clipboard.writeText(Z.team?.code || '')
+  toast('Team-Code ' + Z.team?.code + ' kopiert!')
+}
+
+// ── Navigation ───────────────────────────────────────────────────
+function zeigeSeite(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('aktiv'))
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('aktiv'))
+  document.getElementById('p-' + name).classList.add('aktiv')
+  document.querySelectorAll('.nav-item')[{home:0,spieler:1,spieltag:2,ranking:3}[name]].classList.add('aktiv')
+  if (name === 'home')     renderHome()
+  if (name === 'spieler')  renderSpielerSeite()
+  if (name === 'spieltag') ladeSpieltag()
+  if (name === 'ranking')  ladeRanking()
+}
+
+// ── Daten laden ──────────────────────────────────────────────────
+async function allesDaten() {
+  await ladeSpieler()
+  await ladeSpieltag()
+  renderHome()
+}
+
+async function ladeSpieler() {
+  const res = await fetch('/api/spieler')
+  Z.spieler = await res.json()
+}
+
+// ── Spieler Seite ────────────────────────────────────────────────
+async function spielerAdd() {
+  const name  = document.getElementById('sp-name').value.trim()
+  const alias = document.getElementById('sp-alias').value.trim()
+  if (!name) { meldung('m-sp', 'Bitte Namen eingeben.', 'fehler'); return }
+
+  const [res, d] = await post('/api/spieler', { name, alias, ist_gast: true })
+  if (!res.ok) { meldung('m-sp', d.fehler, 'fehler'); return }
+
+  document.getElementById('sp-name').value  = ''
+  document.getElementById('sp-alias').value = ''
+  await ladeSpieler()
+  renderSpielerSeite()
+  modalAuf(d)
+}
+
+async function spielerDel(id) {
+  await fetch('/api/spieler/' + id, { method: 'DELETE' })
+  await ladeSpieler()
+  renderSpielerSeite()
+}
+
+async function claimCodeAnzeigen(sid) {
+  const res = await fetch('/api/spieler/' + sid + '/claim_code')
+  const d   = await res.json()
+  if (d.claim_code) modalAuf({ alias: d.alias, claim_code: d.claim_code })
+  else toast('Spieler hat bereits einen eigenen Account.')
+}
+
+function av(s, klein) {
+  const size  = klein ? 'width:26px;height:26px;font-size:12px' : ''
+  const klass = s.ist_gast ? 'gast' : ''
+  return `<div class="avatar ${klass}" style="${size}">${(s.alias||s.name||'?')[0].toUpperCase()}</div>`
+}
+
+function renderSpielerSeite() {
+  document.getElementById('sp-anzahl').textContent = Z.spieler.length
+  const liste = document.getElementById('spieler-liste')
+  if (!Z.spieler.length) { liste.innerHTML = '<div class="leer">Noch keine Spieler.</div>'; return }
+  liste.innerHTML = Z.spieler.map(s => `
+    <div class="spieler-item">
+      <div class="sp-links">
+        ${av(s, false)}
+        <div style="min-width:0">
+          <div class="sp-name">${s.alias}${s.ist_gast ? '<span class="gast-badge">GAST</span>' : ''}</div>
+          <div class="sp-sub">${s.punkte} Pkt · ${s.spiele} Spiele</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        ${s.ist_gast ? `<button class="btn-ghost" style="color:var(--gast);border-color:rgba(255,152,0,.3)" onclick="claimCodeAnzeigen('${s.id}')">Code</button>` : ''}
+        <button class="btn-ghost" onclick="if(confirm('${s.alias} wirklich entfernen und den Fortschritt Löschen?')) spielerDel('${s.id}')">✕</button>
+      </div>
+    </div>
+  `).join('')
+}
+
+// ── Modus ────────────────────────────────────────────────────────
+function modusWaehlen(m) {
+  Z.modus = m
+  document.getElementById('mb-random').classList.toggle('aktiv', m === 'random')
+  document.getElementById('mb-ranked').classList.toggle('aktiv', m === 'ranked')
+}
+
+// ── Spieltag laden ───────────────────────────────────────────────
+async function ladeSpieltag() {
+  const res = await fetch('/api/spieltag/aktiv')
+  const d   = await res.json()
+
+  if (d.aktiv) {
+    Z.spieltag = d.spieltag
+    document.getElementById('st-start').style.display = 'none'
+    document.getElementById('st-aktiv').style.display = 'block'
+    renderTurnier()
+  } else {
+    Z.spieltag = null
+    document.getElementById('st-start').style.display = 'block'
+    document.getElementById('st-aktiv').style.display = 'none'
+    renderAuswahlListe()
+  }
+}
+
+function renderAuswahlListe() {
+  const liste = document.getElementById('st-liste')
+  if (!Z.spieler.length) { liste.innerHTML = '<div class="leer">Erst Spieler hinzufügen.</div>'; return }
+  liste.innerHTML = Z.spieler.map(s => `
+    <div class="spieler-item" id="si-${s.id}" onclick="toggleAuswahl('${s.id}')">
+      <div class="sp-links">
+        ${av(s, false)}
+        <div>
+          <div class="sp-name">${s.alias}${s.ist_gast ? '<span class="gast-badge">GAST</span>' : ''}</div>
+          <div class="sp-sub">${s.punkte} Punkte</div>
+        </div>
+      </div>
+      <input type="checkbox" id="cb-${s.id}" onclick="event.stopPropagation();zaehlerUpdate()">
+    </div>
+  `).join('')
+}
+
+function toggleAuswahl(id) {
+  const cb = document.getElementById('cb-' + id)
+  cb.checked = !cb.checked
+  document.getElementById('si-' + id).classList.toggle('selected', cb.checked)
+  zaehlerUpdate()
+}
+
+function zaehlerUpdate() {
+  const n = document.querySelectorAll('#st-liste input:checked').length
+  document.getElementById('st-anzahl').textContent = n + ' ausgewählt'
+}
+
+async function spieltagStarten() {
+  const ids = [...document.querySelectorAll('#st-liste input:checked')].map(cb => cb.id.replace('cb-',''))
+  if (ids.length < 4)      { meldung('m-st', 'Mindestens 4 Spieler auswählen.', 'fehler'); return }
+  if (ids.length % 2 !== 0){ meldung('m-st', 'Gerade Anzahl nötig (4, 6, 8…).', 'fehler'); return }
+
+  const [res, d] = await post('/api/spieltag/starten', { spieler_ids: ids, modus: Z.modus })
+  if (!res.ok) { meldung('m-st', d.fehler, 'fehler'); return }
+  Z.spieltag = d
+  await ladeSpieltag()
+  renderHome()
+}
+
+// ── Turnier rendern ──────────────────────────────────────────────
+function renderTurnier() {
+  const st = Z.spieltag
+  if (!st) return
+
+  const aktRunde     = st.aktuelle_runde
+  const gesamtRunden = st.gesamt_runden
+  const matches      = st.matches            // nur aktuelle Runde
+  const verlauf      = st.alle_ergebnisse   // alle gespielten
+
+  // Runden-Header
+  document.getElementById('st-runde-label').textContent = `Runde ${aktRunde}`
+  document.getElementById('st-runde-sub').textContent   = `von ${gesamtRunden} Runden gesamt`
+  document.getElementById('st-runde-pill').textContent  =
+    `${matches.filter(m => m.status === 'gespielt').length}/${matches.length} gespielt`
+
+  // Aktuelle Matches
+  const mc = document.getElementById('st-matches')
+  mc.innerHTML = matches.map((m, i) => {
+    const gsp = m.status === 'gespielt'
+    return `
+    <div class="match-karte">
+      <div class="match-nr">MATCH ${i+1} · <span class="status-pill ${gsp ? 's-gespielt' : 's-offen'}">${gsp ? 'GESPIELT' : 'OFFEN'}</span></div>
+      <div class="match-grid">
+        <div class="match-team">
+          ${m.team1.map(s => `<div class="match-sp">${av(s,true)}<span style="font-size:12px">${s.alias||s.name}</span></div>`).join('')}
+        </div>
+        <div class="vs">VS</div>
+        <div class="match-team r">
+          ${m.team2.map(s => `<div class="match-sp r">${av(s,true)}<span style="font-size:12px">${s.alias||s.name}</span></div>`).join('')}
+        </div>
+      </div>
+      ${gsp
+        ? `<div class="match-score">${m.tore_team1} : ${m.tore_team2}</div>`
+        : `<div class="ergebnis-row">
+            <input type="number" id="t1-${m.id}" placeholder="0" min="0">
+            <div class="ergebnis-div">:</div>
+            <input type="number" id="t2-${m.id}" placeholder="0" min="0">
+            <button class="btn btn-sm" onclick="ergebnisEintragen('${m.id}')">✓</button>
+          </div>`
+      }
+    </div>`
+  }).join('')
+
+  // Verlauf bisheriger Runden
+  const verlaufBox = document.getElementById('st-verlauf-box')
+  const verlaufEl  = document.getElementById('st-verlauf')
+  const vergangenRunden = verlauf.filter(v => v.runde < aktRunde)
+
+  if (vergangenRunden.length === 0) {
+    verlaufBox.style.display = 'none'
+  } else {
+    verlaufBox.style.display = 'block'
+    // Gruppieren nach Runde
+    const gruppen = {}
+    vergangenRunden.forEach(v => {
+      if (!gruppen[v.runde]) gruppen[v.runde] = []
+      gruppen[v.runde].push(v)
+    })
+    verlaufEl.innerHTML = Object.keys(gruppen).map(runde => `
+      <div class="verlauf-runde">RUNDE ${runde}</div>
+      ${gruppen[runde].map(v => `
+        <div class="verlauf-zeile">
+          <span style="flex:1;font-size:11px;color:var(--tg)">${v.t1}</span>
+          <span class="verlauf-score">${v.score}</span>
+          <span style="flex:1;font-size:11px;color:var(--tg);text-align:right">${v.t2}</span>
+        </div>
+      `).join('')}
+    `).join('')
+  }
+
+  // Team Ranking
+  fetch('/api/spieltag/' + st.id + '/team_ranking')
+    .then(r => r.json())
+    .then(teams => {
+      const el = document.getElementById('st-team-ranking')
+      if (!el) return
+      if (!teams.length) {
+        el.innerHTML = '<div class="leer" style="padding:10px 0">Noch keine Matches gespielt.</div>'
+        return
+      }
+      const medals = ['🥇','🥈','🥉']
+      el.innerHTML = teams.map((t, i) => `
+        <div class="rang-item" style="margin-bottom:8px">
+          <div class="rang-nr" style="color:${i===0?'var(--gold)':i===1?'var(--silber)':i===2?'var(--bronze)':'var(--tg)'}">
+            ${medals[i] || (i+1)}
+          </div>
+          <div style="flex:1">
+            <div class="sp-name">${t.spieler.map(s => s.alias).join(' & ')}</div>
+            <div class="sp-sub">${t.siege} Siege · ${t.spiele} Spiele</div>
+          </div>
+          <div class="rang-pkt">
+            <div class="rang-pkt-zahl">${t.punkte}</div>
+            <div class="rang-pkt-label">Punkte</div>
+          </div>
+        </div>
+      `).join('')
+    })
+}
+
+// ── Ergebnis eintragen ───────────────────────────────────────────
+async function ergebnisEintragen(mid) {
+  const t1 = document.getElementById('t1-' + mid).value
+  const t2 = document.getElementById('t2-' + mid).value
+  if (t1 === '' || t2 === '') { toast('Beide Tore eingeben!'); return }
+
+  const [res, d] = await post('/api/spieltag/ergebnis', {
+    match_id: mid, tore_team1: parseInt(t1), tore_team2: parseInt(t2)
+  })
+  if (!res.ok) { toast('Fehler beim Speichern.'); return }
+
+  await ladeSpieler()
+  // Spieltag neu laden
+  const res2 = await fetch('/api/spieltag/aktiv')
+  const d2   = await res2.json()
+  if (d2.aktiv) {
+    Z.spieltag = d2.spieltag
+    renderTurnier()
+    if (d.naechste_runde) toast('🎉 Runde abgeschlossen! Nächste Runde startet.')
+    else toast('Ergebnis gespeichert!')
+  }
+}
+
+// ── Turnier beenden ──────────────────────────────────────────────
+async function spieltagBeenden() {
+  if (!confirm('Turnier wirklich beenden?')) return
+  await post('/api/spieltag/beenden', { spieltag_id: Z.spieltag.id })
+  toast('Turnier beendet!')
+  await allesDaten()
+  zeigeSeite('ranking')
+}
+
+// ── Ranking ──────────────────────────────────────────────────────
+async function ladeRanking() {
+  const res   = await fetch('/api/ranking')
+  const liste = await res.json()
+  const el    = document.getElementById('ranking-liste')
+  if (!liste.length) { el.innerHTML = '<div class="leer">Noch keine Spiele.</div>'; return }
+  const medals = ['🥇','🥈','🥉']
+  el.innerHTML = liste.map((s, i) => `
+    <div class="rang-item">
+      <div class="rang-nr" style="color:${i===0?'var(--gold)':i===1?'var(--silber)':i===2?'var(--bronze)':'var(--tg)'}">
+        ${medals[i] || (i+1)}
+      </div>
+      ${av(s, false)}
+      <div style="flex:1;min-width:0">
+        <div class="sp-name">${s.alias}${s.ist_gast ? '<span class="gast-badge">GAST</span>' : ''}</div>
+        <div class="sp-sub">${s.siege} Siege · ${s.spiele} Spiele</div>
+      </div>
+      <div class="rang-pkt">
+        <div class="rang-pkt-zahl">${s.punkte}</div>
+        <div class="rang-pkt-label">Punkte</div>
+      </div>
+    </div>
+  `).join('')
+}
+
+// ── Home ─────────────────────────────────────────────────────────
+async function renderHome() {
+  await ladeSpieler()
+  document.getElementById('h-spieler').textContent = Z.spieler.length
+  document.getElementById('h-matches').textContent = Math.floor(Z.spieler.reduce((a,s)=>a+s.spiele,0)/2)
+  document.getElementById('h-status').textContent  = Z.spieltag ? 'Aktiv' : '—'
+
+  // Top 3
+  const medals = ['🥇','🥈','🥉']
+  const top3   = [...Z.spieler].sort((a,b)=>b.punkte-a.punkte).slice(0,3)
+  const top3el = document.getElementById('h-top3')
+  if (!top3.length || top3.every(s=>s.punkte===0)) {
+    top3el.innerHTML = '<div class="leer">Noch keine Spiele gespielt.</div>'
+  } else {
+    top3el.innerHTML = top3.map((s,i) => `
+      <div class="rang-item" style="margin-bottom:8px">
+        <div class="rang-nr">${medals[i]}</div>
+        ${av(s, false)}
+        <div class="sp-name" style="flex:1">${s.alias}</div>
+        <div class="rang-pkt-zahl">${s.punkte} Pkt</div>
+      </div>`).join('')
+  }
+
+  // Spieltag Status
+  const stel = document.getElementById('h-spieltag')
+  if (Z.spieltag) {
+    const st = Z.spieltag
+    stel.innerHTML = `
+      <div class="sp-sub" style="line-height:1.8">
+        Runde ${st.aktuelle_runde} von ${st.gesamt_runden}<br>
+        Modus: ${st.modus === 'ranked' ? '⚖️ Ranked' : '🎲 Zufällig'}
+      </div>`
+  } else {
+    stel.innerHTML = '<div class="leer" style="padding:8px 0">Kein aktives Turnier.</div>'
+  }
+}
+
+// ── Init ─────────────────────────────────────────────────────────
+async function init() {
+  const res = await fetch('/api/session')
+  const d   = await res.json()
+  if (d.eingeloggt) appStarten(d.team, d.spieler_id)
+}
+init()
+
+</script>
+</body>
+</html>
