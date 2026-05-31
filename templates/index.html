@@ -191,6 +191,91 @@
 
 
 <!-- ════════════════════════════════════════════════════════════ -->
+<!--  PROFIL                                                     -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div id="s-profil" class="screen">
+
+  <div class="app-header">
+    <div>
+      <div class="header-logo">Court Link</div>
+      <div class="header-team" id="pf-account-subtitle">Mein Profil</div>
+    </div>
+    <button class="btn-header" onclick="if(confirm('Möchtest du dich wirklich abmelden?')) abmelden()">↩ Abmelden</button>
+  </div>
+
+  <div style="flex:1;overflow-y:auto;padding:18px">
+
+    <!-- Info wenn kein Team -->
+    <div id="pf-kein-team-info" class="info-box" style="display:none">
+      <strong>Kein Team vorhanden</strong><br>
+      Trete einem Team bei oder erstelle eines um loszulegen!
+    </div>
+
+    <!-- Account Stats -->
+    <div class="karte">
+      <div class="karte-titel">Mein Account</div>
+      <div class="home-stat">
+        <div><div class="stat-zahl" id="pf-punkte">0</div><div class="stat-label">Punkte</div></div>
+        <div><div class="stat-zahl" id="pf-siege">0</div><div class="stat-label">Siege</div></div>
+        <div><div class="stat-zahl" id="pf-spiele">0</div><div class="stat-label">Spiele</div></div>
+      </div>
+      <div style="font-size:12px;color:var(--tg);text-align:center;margin-top:4px" id="pf-name"></div>
+    </div>
+
+    <!-- Meine Teams -->
+    <div class="karte">
+      <div class="sec">
+        <span class="karte-titel" style="margin:0">Meine Teams</span>
+      </div>
+      <div id="pf-teams"><div class="leer">Noch kein Team.</div></div>
+    </div>
+
+    <!-- Team erstellen -->
+    <div class="karte">
+      <div class="karte-titel">Team erstellen</div>
+      <input type="text" id="pf-teamname" placeholder="Team-Name">
+      <div class="pw-wrap">
+        <input type="password" id="pf-team-pw" placeholder="Team-Passwort (mind. 4 Zeichen)">
+        <button class="pw-auge" onclick="togglePw('pf-team-pw',this)" tabindex="-1">👁</button>
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <input type="text" id="pf-sp-name" placeholder="Dein Spielername" style="margin-bottom:0">
+        <input type="text" id="pf-sp-alias" placeholder="Alias (opt.)" style="margin-bottom:0">
+      </div>
+      <div id="m-pf-erstellen" class="meldung"></div>
+      <button class="btn" onclick="profilTeamErstellen()">Team erstellen</button>
+    </div>
+
+    <!-- Team beitreten -->
+    <div class="karte">
+      <div class="karte-titel">Team beitreten</div>
+      <input type="text" id="pf-join-code" placeholder="Team-Code" style="text-transform:uppercase;letter-spacing:2px">
+      <div class="pw-wrap">
+        <input type="password" id="pf-join-pw" placeholder="Team-Passwort">
+        <button class="pw-auge" onclick="togglePw('pf-join-pw',this)" tabindex="-1">👁</button>
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <input type="text" id="pf-join-name" placeholder="Dein Spielername" style="margin-bottom:0">
+        <input type="text" id="pf-join-alias" placeholder="Alias (opt.)" style="margin-bottom:0">
+      </div>
+      <div id="m-pf-beitreten" class="meldung"></div>
+      <button class="btn-outline" onclick="profilTeamBeitreten()">Beitreten</button>
+    </div>
+
+    <!-- Gast übernehmen -->
+    <div class="karte">
+      <div class="karte-titel">Gast-Account übernehmen</div>
+      <p class="hinweis">Alle bisherigen Punkte bleiben erhalten!</p>
+      <input type="text" id="pf-claim" placeholder="Claim-Code" style="text-transform:uppercase;letter-spacing:2px">
+      <div id="m-pf-claim" class="meldung"></div>
+      <button class="btn-gast" onclick="profilGastUebernehmen()">Account übernehmen</button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
 <!--  APP                                                        -->
 <!-- ════════════════════════════════════════════════════════════ -->
 <div id="s-app" class="screen">
@@ -202,7 +287,7 @@
     </div>
     <div style="display:flex;align-items:center;gap:8px">
       <div class="code-badge" id="h-code" onclick="codekopieren()">——</div>
-      <button class="btn-header" onclick="if(confirm('Möchtest du dich wirklich abmelden?')) abmelden()">↩</button>
+      <button class="btn-header" onclick="zurueckZuProfil()">← Teams</button>
     </div>
   </div>
 
@@ -338,71 +423,6 @@
       </div>
     </div>
 
-    <!-- PROFIL ────────────────────────────────────────────────── -->
-    <div id="p-profil" class="page">
-
-      <!-- Account Stats -->
-      <div class="karte">
-        <div class="karte-titel">Mein Account</div>
-        <div class="home-stat">
-          <div><div class="stat-zahl" id="pf-punkte">0</div><div class="stat-label">Punkte</div></div>
-          <div><div class="stat-zahl" id="pf-siege">0</div><div class="stat-label">Siege</div></div>
-          <div><div class="stat-zahl" id="pf-spiele">0</div><div class="stat-label">Spiele</div></div>
-        </div>
-        <div style="font-size:12px;color:var(--tg);text-align:center;margin-top:4px" id="pf-name"></div>
-      </div>
-
-      <!-- Meine Teams -->
-      <div class="karte">
-        <div class="sec">
-          <span class="karte-titel" style="margin:0">Meine Teams</span>
-        </div>
-        <div id="pf-teams"><div class="leer">Noch kein Team.</div></div>
-      </div>
-
-      <!-- Team erstellen -->
-      <div class="karte">
-        <div class="karte-titel">Team erstellen</div>
-        <input type="text" id="pf-teamname" placeholder="Team-Name">
-        <div class="pw-wrap">
-          <input type="password" id="pf-team-pw" placeholder="Team-Passwort (mind. 4 Zeichen)">
-          <button class="pw-auge" onclick="togglePw('pf-team-pw',this)" tabindex="-1">👁</button>
-        </div>
-        <div class="row" style="margin-bottom:8px">
-          <input type="text" id="pf-sp-name" placeholder="Dein Spielername" style="margin-bottom:0">
-          <input type="text" id="pf-sp-alias" placeholder="Alias (opt.)" style="margin-bottom:0">
-        </div>
-        <div id="m-pf-erstellen" class="meldung"></div>
-        <button class="btn" onclick="profilTeamErstellen()">Team erstellen</button>
-      </div>
-
-      <!-- Team beitreten -->
-      <div class="karte">
-        <div class="karte-titel">Team beitreten</div>
-        <input type="text" id="pf-join-code" placeholder="Team-Code" style="text-transform:uppercase;letter-spacing:2px">
-        <div class="pw-wrap">
-          <input type="password" id="pf-join-pw" placeholder="Team-Passwort">
-          <button class="pw-auge" onclick="togglePw('pf-join-pw',this)" tabindex="-1">👁</button>
-        </div>
-        <div class="row" style="margin-bottom:8px">
-          <input type="text" id="pf-join-name" placeholder="Dein Spielername" style="margin-bottom:0">
-          <input type="text" id="pf-join-alias" placeholder="Alias (opt.)" style="margin-bottom:0">
-        </div>
-        <div id="m-pf-beitreten" class="meldung"></div>
-        <button class="btn-outline" onclick="profilTeamBeitreten()">Beitreten</button>
-      </div>
-
-      <!-- Gast übernehmen -->
-      <div class="karte">
-        <div class="karte-titel">Gast-Account übernehmen</div>
-        <p class="hinweis">Alle bisherigen Punkte bleiben erhalten!</p>
-        <input type="text" id="pf-claim" placeholder="Claim-Code" style="text-transform:uppercase;letter-spacing:2px">
-        <div id="m-pf-claim" class="meldung"></div>
-        <button class="btn-gast" onclick="profilGastUebernehmen()">Account übernehmen</button>
-      </div>
-
-    </div>
-
   </div>
 
   <div class="bottom-nav">
@@ -410,7 +430,6 @@
     <div class="nav-item" onclick="zeigeSeite('spieler')"><div class="nav-icon">👥</div>Spieler</div>
     <div class="nav-item" onclick="zeigeSeite('spieltag')"><div class="nav-icon">🎾</div>Turnier</div>
     <div class="nav-item" onclick="zeigeSeite('ranking')"><div class="nav-icon">🏆</div>Ranking</div>
-    <div class="nav-item" onclick="zeigeSeite('profil')"><div class="nav-icon">👤</div>Profil</div>
   </div>
 </div>
 
@@ -533,16 +552,30 @@ async function accountEinloggen() {
 // ── Nach Login: Team auswählen oder Profil zeigen ─────────────────
 async function nachLoginWeiterleiten(teams) {
   if (teams && teams.length === 1) {
-    // Einziges Team automatisch wählen
     const [res, d] = await post('/api/team/waehlen', { team_id: teams[0].id })
     if (res.ok) { appStarten(d.team, teams[0].spieler_id); return }
   }
-  // Kein oder mehrere Teams → Profil zeigen
+  zeigeProfil()
+}
+
+function zeigeProfil() {
   document.getElementById('s-login').classList.remove('aktiv')
-  document.getElementById('s-app').classList.add('aktiv')
-  document.getElementById('h-teamname').textContent = Z.account?.name || '—'
-  document.getElementById('h-code').textContent = '——'
-  zeigeSeite('profil')
+  document.getElementById('s-app').classList.remove('aktiv')
+  document.getElementById('s-profil').classList.add('aktiv')
+  document.getElementById('pf-account-subtitle').textContent = Z.account?.name || 'Mein Profil'
+  ladeProfil()
+}
+
+async function zurueckZuProfil() {
+  await fetch('/api/team/verlassen', { method: 'POST' })
+  Z.team       = null
+  Z.spieler_id = null
+  Z.spieler    = []
+  Z.spieltag   = null
+  document.getElementById('s-app').classList.remove('aktiv')
+  document.getElementById('s-profil').classList.add('aktiv')
+  document.getElementById('pf-account-subtitle').textContent = Z.account?.name || 'Mein Profil'
+  ladeProfil()
 }
 
 // ── Profil-Funktionen ────────────────────────────────────────────
@@ -552,14 +585,16 @@ async function ladeProfil() {
   if (!d.account) return
 
   Z.account = d.account
-  document.getElementById('pf-name').textContent = d.account.name
-  document.getElementById('pf-punkte').textContent = d.stats?.punkte ?? 0
-  document.getElementById('pf-siege').textContent  = d.stats?.siege  ?? 0
-  document.getElementById('pf-spiele').textContent = d.stats?.spiele ?? 0
+  document.getElementById('pf-name').textContent    = d.account.name
+  document.getElementById('pf-punkte').textContent  = d.stats?.punkte ?? 0
+  document.getElementById('pf-siege').textContent   = d.stats?.siege  ?? 0
+  document.getElementById('pf-spiele').textContent  = d.stats?.spiele ?? 0
+
+  document.getElementById('pf-kein-team-info').style.display = d.teams.length === 0 ? 'block' : 'none'
 
   const el = document.getElementById('pf-teams')
   if (!d.teams.length) {
-    el.innerHTML = '<div class="leer">Noch kein Team — erstelle oder tritt einem bei.</div>'
+    el.innerHTML = '<div class="leer">Noch kein Team.</div>'
   } else {
     el.innerHTML = d.teams.map(t => `
       <div class="spieler-item">
@@ -570,7 +605,7 @@ async function ladeProfil() {
             <div class="sp-sub">Code: ${t.code}</div>
           </div>
         </div>
-        <button class="btn btn-sm" onclick="teamWaehlen('${t.id}','${t.spieler_id}')">Wechseln</button>
+        <button class="btn btn-sm" onclick="teamWaehlen('${t.id}','${t.spieler_id}')">Öffnen</button>
       </div>`).join('')
   }
 }
@@ -625,6 +660,7 @@ function appStarten(team, sid) {
   document.getElementById('h-code').textContent     = team.code
 
   document.getElementById('s-login').classList.remove('aktiv')
+  document.getElementById('s-profil').classList.remove('aktiv')
   document.getElementById('s-app').classList.add('aktiv')
   allesDaten()
   zeigeSeite('home')
@@ -634,6 +670,7 @@ async function abmelden() {
   await fetch('/api/abmelden', { method: 'POST' })
   Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random' }
   document.getElementById('s-app').classList.remove('aktiv')
+  document.getElementById('s-profil').classList.remove('aktiv')
   document.getElementById('s-login').classList.add('aktiv')
 }
 
@@ -647,13 +684,12 @@ function zeigeSeite(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('aktiv'))
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('aktiv'))
   document.getElementById('p-' + name).classList.add('aktiv')
-  const idx = {home:0, spieler:1, spieltag:2, ranking:3, profil:4}[name]
+  const idx = {home:0, spieler:1, spieltag:2, ranking:3}[name]
   if (idx !== undefined) document.querySelectorAll('.nav-item')[idx].classList.add('aktiv')
   if (name === 'home')     renderHome()
   if (name === 'spieler')  renderSpielerSeite()
   if (name === 'spieltag') ladeSpieltag()
   if (name === 'ranking')  ladeRanking()
-  if (name === 'profil')   ladeProfil()
 }
 
 // ── Daten laden ──────────────────────────────────────────────────
@@ -999,12 +1035,7 @@ async function init() {
   if (d.team) {
     appStarten(d.team, d.spieler_id)
   } else {
-    // Account eingeloggt, aber kein Team gewählt
-    document.getElementById('s-login').classList.remove('aktiv')
-    document.getElementById('s-app').classList.add('aktiv')
-    document.getElementById('h-teamname').textContent = d.account?.name || '—'
-    document.getElementById('h-code').textContent = '——'
-    zeigeSeite('profil')
+    zeigeProfil()
   }
 }
 init()

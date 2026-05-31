@@ -156,6 +156,13 @@ def api_gast_uebernehmen():
 
 # ══ Team wechseln ════════════════════════════════════════════════════
 
+@app.route("/api/team/verlassen", methods=["POST"])
+def api_team_verlassen():
+    session.pop('team_id', None)
+    session.pop('spieler_id', None)
+    return jsonify({"ok": True})
+
+
 @app.route("/api/team/waehlen", methods=["POST"])
 def api_team_waehlen():
     if not account_id():
