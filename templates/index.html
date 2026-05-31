@@ -161,89 +161,30 @@
     <div class="logo-sub">PADEL · TEAM MANAGER</div>
 
     <div class="login-tabs">
-      <div class="login-tab aktiv" onclick="loginTab('erstellen',this)">Erstellen</div>
+      <div class="login-tab aktiv" onclick="loginTab('registrieren',this)">Registrieren</div>
       <div class="login-tab" onclick="loginTab('einloggen',this)">Einloggen</div>
-      <div class="login-tab" onclick="loginTab('beitreten',this)">Beitreten</div>
-      <div class="login-tab" onclick="loginTab('uebernehmen',this)">Übernehmen</div>
     </div>
 
-    <!-- Team erstellen -->
-    <div id="lf-erstellen">
-      <input type="text" id="l-teamname" placeholder="Team-Name (z.B. Padel Kings)">
-      <div class="pw-section">
-        <div class="pw-section-label">🔒 Team schützen</div>
-        <div class="pw-wrap" style="margin-bottom:0">
-          <input type="password" id="l-team-pw1" placeholder="Team-Passwort (mind. 4 Zeichen)">
-          <button class="pw-auge" onclick="togglePw('l-team-pw1',this)" tabindex="-1">👁</button>
-        </div>
-      </div>
-      <div class="pw-section">
-        <div class="pw-section-label">👤 Dein Account</div>
-        <div class="row" style="margin-bottom:8px">
-          <input type="text" id="l-name1" placeholder="Dein Name" style="margin-bottom:0">
-          <input type="text" id="l-alias1" placeholder="Alias (opt.)" style="margin-bottom:0">
-        </div>
-        <div class="pw-wrap" style="margin-bottom:0">
-          <input type="password" id="l-pw1" placeholder="Account-Passwort (mind. 4 Zeichen)">
-          <button class="pw-auge" onclick="togglePw('l-pw1',this)" tabindex="-1">👁</button>
-        </div>
+    <!-- Registrieren -->
+    <div id="lf-registrieren">
+      <input type="text" id="l-name-r" placeholder="Dein Name">
+      <div class="pw-wrap">
+        <input type="password" id="l-pw-r" placeholder="Passwort (mind. 4 Zeichen)">
+        <button class="pw-auge" onclick="togglePw('l-pw-r',this)" tabindex="-1">👁</button>
       </div>
       <div id="m-l1" class="meldung"></div>
-      <button class="btn" onclick="teamErstellen()">Team erstellen</button>
+      <button class="btn" onclick="accountRegistrieren()">Account erstellen</button>
     </div>
 
     <!-- Einloggen -->
     <div id="lf-einloggen" style="display:none">
-      <input type="text" id="l-code-e" placeholder="Team-Code" style="text-transform:uppercase;letter-spacing:2px">
-      <div class="pw-wrap">
-        <input type="password" id="l-team-pw-e" placeholder="Team-Passwort">
-        <button class="pw-auge" onclick="togglePw('l-team-pw-e',this)" tabindex="-1">👁</button>
-      </div>
       <input type="text" id="l-name-e" placeholder="Dein Name">
       <div class="pw-wrap">
-        <input type="password" id="l-pw-e" placeholder="Account-Passwort">
+        <input type="password" id="l-pw-e" placeholder="Passwort">
         <button class="pw-auge" onclick="togglePw('l-pw-e',this)" tabindex="-1">👁</button>
       </div>
       <div id="m-l2" class="meldung"></div>
-      <button class="btn" onclick="einloggen()">Einloggen</button>
-    </div>
-
-    <!-- Beitreten -->
-    <div id="lf-beitreten" style="display:none">
-      <input type="text" id="l-code-b" placeholder="Team-Code" style="text-transform:uppercase;letter-spacing:2px">
-      <div class="pw-wrap">
-        <input type="password" id="l-team-pw-b" placeholder="Team-Passwort">
-        <button class="pw-auge" onclick="togglePw('l-team-pw-b',this)" tabindex="-1">👁</button>
-      </div>
-      <div class="row" style="margin-bottom:8px">
-        <input type="text" id="l-name-b" placeholder="Dein Name" style="margin-bottom:0">
-        <input type="text" id="l-alias-b" placeholder="Alias (opt.)" style="margin-bottom:0">
-      </div>
-      <div class="pw-wrap">
-        <input type="password" id="l-pw-b" placeholder="Account-Passwort (mind. 4 Zeichen)">
-        <button class="pw-auge" onclick="togglePw('l-pw-b',this)" tabindex="-1">👁</button>
-      </div>
-      <div id="m-l3" class="meldung"></div>
-      <button class="btn" onclick="teamBeitreten()">Registrieren & beitreten</button>
-    </div>
-
-    <!-- Gast übernehmen -->
-    <div id="lf-uebernehmen" style="display:none">
-      <p style="font-size:13px;color:var(--tg);margin-bottom:14px;line-height:1.6">
-        Du hast einen <span style="color:var(--gast)">Claim-Code</span>?
-        Übernimm deinen Account — alle Punkte bleiben erhalten!
-      </p>
-      <input type="text" id="l-claim" placeholder="Claim-Code" style="text-transform:uppercase;letter-spacing:2px">
-      <div class="row" style="margin-bottom:8px">
-        <input type="text" id="l-name-u" placeholder="Dein Name" style="margin-bottom:0">
-        <input type="text" id="l-alias-u" placeholder="Alias (opt.)" style="margin-bottom:0">
-      </div>
-      <div class="pw-wrap">
-        <input type="password" id="l-pw-u" placeholder="Neues Account-Passwort (mind. 4 Zeichen)">
-        <button class="pw-auge" onclick="togglePw('l-pw-u',this)" tabindex="-1">👁</button>
-      </div>
-      <div id="m-l4" class="meldung"></div>
-      <button class="btn" style="background:var(--gast)" onclick="gastUebernehmen()">Account übernehmen</button>
+      <button class="btn" onclick="accountEinloggen()">Einloggen</button>
     </div>
   </div>
 </div>
@@ -382,6 +323,7 @@
             </div>
           </div>
           <hr class="div">
+          <button class="btn" onclick="alleErgebnisseSpeichern()" style="margin-bottom:8px">Alle speichern</button>
           <button class="btn btn-rot" onclick="spieltagBeenden()">Turnier beenden</button>
         </div>
       </div>
@@ -396,6 +338,71 @@
       </div>
     </div>
 
+    <!-- PROFIL ────────────────────────────────────────────────── -->
+    <div id="p-profil" class="page">
+
+      <!-- Account Stats -->
+      <div class="karte">
+        <div class="karte-titel">Mein Account</div>
+        <div class="home-stat">
+          <div><div class="stat-zahl" id="pf-punkte">0</div><div class="stat-label">Punkte</div></div>
+          <div><div class="stat-zahl" id="pf-siege">0</div><div class="stat-label">Siege</div></div>
+          <div><div class="stat-zahl" id="pf-spiele">0</div><div class="stat-label">Spiele</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--tg);text-align:center;margin-top:4px" id="pf-name"></div>
+      </div>
+
+      <!-- Meine Teams -->
+      <div class="karte">
+        <div class="sec">
+          <span class="karte-titel" style="margin:0">Meine Teams</span>
+        </div>
+        <div id="pf-teams"><div class="leer">Noch kein Team.</div></div>
+      </div>
+
+      <!-- Team erstellen -->
+      <div class="karte">
+        <div class="karte-titel">Team erstellen</div>
+        <input type="text" id="pf-teamname" placeholder="Team-Name">
+        <div class="pw-wrap">
+          <input type="password" id="pf-team-pw" placeholder="Team-Passwort (mind. 4 Zeichen)">
+          <button class="pw-auge" onclick="togglePw('pf-team-pw',this)" tabindex="-1">👁</button>
+        </div>
+        <div class="row" style="margin-bottom:8px">
+          <input type="text" id="pf-sp-name" placeholder="Dein Spielername" style="margin-bottom:0">
+          <input type="text" id="pf-sp-alias" placeholder="Alias (opt.)" style="margin-bottom:0">
+        </div>
+        <div id="m-pf-erstellen" class="meldung"></div>
+        <button class="btn" onclick="profilTeamErstellen()">Team erstellen</button>
+      </div>
+
+      <!-- Team beitreten -->
+      <div class="karte">
+        <div class="karte-titel">Team beitreten</div>
+        <input type="text" id="pf-join-code" placeholder="Team-Code" style="text-transform:uppercase;letter-spacing:2px">
+        <div class="pw-wrap">
+          <input type="password" id="pf-join-pw" placeholder="Team-Passwort">
+          <button class="pw-auge" onclick="togglePw('pf-join-pw',this)" tabindex="-1">👁</button>
+        </div>
+        <div class="row" style="margin-bottom:8px">
+          <input type="text" id="pf-join-name" placeholder="Dein Spielername" style="margin-bottom:0">
+          <input type="text" id="pf-join-alias" placeholder="Alias (opt.)" style="margin-bottom:0">
+        </div>
+        <div id="m-pf-beitreten" class="meldung"></div>
+        <button class="btn-outline" onclick="profilTeamBeitreten()">Beitreten</button>
+      </div>
+
+      <!-- Gast übernehmen -->
+      <div class="karte">
+        <div class="karte-titel">Gast-Account übernehmen</div>
+        <p class="hinweis">Alle bisherigen Punkte bleiben erhalten!</p>
+        <input type="text" id="pf-claim" placeholder="Claim-Code" style="text-transform:uppercase;letter-spacing:2px">
+        <div id="m-pf-claim" class="meldung"></div>
+        <button class="btn-gast" onclick="profilGastUebernehmen()">Account übernehmen</button>
+      </div>
+
+    </div>
+
   </div>
 
   <div class="bottom-nav">
@@ -403,6 +410,7 @@
     <div class="nav-item" onclick="zeigeSeite('spieler')"><div class="nav-icon">👥</div>Spieler</div>
     <div class="nav-item" onclick="zeigeSeite('spieltag')"><div class="nav-icon">🎾</div>Turnier</div>
     <div class="nav-item" onclick="zeigeSeite('ranking')"><div class="nav-icon">🏆</div>Ranking</div>
+    <div class="nav-item" onclick="zeigeSeite('profil')"><div class="nav-icon">👤</div>Profil</div>
   </div>
 </div>
 
@@ -435,7 +443,7 @@
 <!-- ════════════════════════════════════════════════════════════ -->
 <script>
 
-let Z = { team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random' }
+let Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random' }
 
 // ── Hilfs ────────────────────────────────────────────────────────
 function toast(t) {
@@ -485,7 +493,7 @@ function claimTeilen() {
 function loginTab(welche, el) {
   document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('aktiv'))
   el.classList.add('aktiv')
-  ;['erstellen','einloggen','beitreten','uebernehmen'].forEach(n =>
+  ;['registrieren','einloggen'].forEach(n =>
     document.getElementById('lf-'+n).style.display = n === welche ? 'block' : 'none'
   )
 }
@@ -500,88 +508,131 @@ async function post(url, body) {
   return [res, await res.json()]
 }
 
-// ── Team erstellen ───────────────────────────────────────────────
-async function teamErstellen() {
-  const team_name    = document.getElementById('l-teamname').value.trim()
-  const team_pw      = document.getElementById('l-team-pw1').value
-  const spieler_name = document.getElementById('l-name1').value.trim()
-  const alias        = document.getElementById('l-alias1').value.trim()
-  const passwort     = document.getElementById('l-pw1').value
-
-  if (!team_name || !team_pw || !spieler_name || !passwort) {
-    meldung('m-l1', 'Alle Felder ausfüllen.', 'fehler'); return
-  }
-  const [res, d] = await post('/api/team/erstellen', { team_name, team_passwort: team_pw, spieler_name, alias, passwort })
+// ── Account registrieren ─────────────────────────────────────────
+async function accountRegistrieren() {
+  const name     = document.getElementById('l-name-r').value.trim()
+  const passwort = document.getElementById('l-pw-r').value
+  if (!name || !passwort) { meldung('m-l1', 'Alle Felder ausfüllen.', 'fehler'); return }
+  const [res, d] = await post('/api/account/registrieren', { name, passwort })
   if (!res.ok) { meldung('m-l1', d.fehler, 'fehler'); return }
-  appStarten(d.team, d.spieler.id)
+  Z.account = d.account
+  nachLoginWeiterleiten(d.teams)
 }
 
-// ── Einloggen ────────────────────────────────────────────────────
-async function einloggen() {
-  const code      = document.getElementById('l-code-e').value.trim()
-  const team_pw   = document.getElementById('l-team-pw-e').value
-  const name      = document.getElementById('l-name-e').value.trim()
-  const passwort  = document.getElementById('l-pw-e').value
-
-  if (!code || !team_pw || !name || !passwort) {
-    meldung('m-l2', 'Alle Felder ausfüllen.', 'fehler'); return
-  }
-  const [res, d] = await post('/api/einloggen', { code, team_passwort: team_pw, spieler_name: name, passwort })
+// ── Account einloggen ────────────────────────────────────────────
+async function accountEinloggen() {
+  const name     = document.getElementById('l-name-e').value.trim()
+  const passwort = document.getElementById('l-pw-e').value
+  if (!name || !passwort) { meldung('m-l2', 'Alle Felder ausfüllen.', 'fehler'); return }
+  const [res, d] = await post('/api/account/einloggen', { name, passwort })
   if (!res.ok) { meldung('m-l2', d.fehler, 'fehler'); return }
+  Z.account = d.account
+  nachLoginWeiterleiten(d.teams)
+}
+
+// ── Nach Login: Team auswählen oder Profil zeigen ─────────────────
+async function nachLoginWeiterleiten(teams) {
+  if (teams && teams.length === 1) {
+    // Einziges Team automatisch wählen
+    const [res, d] = await post('/api/team/waehlen', { team_id: teams[0].id })
+    if (res.ok) { appStarten(d.team, teams[0].spieler_id); return }
+  }
+  // Kein oder mehrere Teams → Profil zeigen
+  document.getElementById('s-login').classList.remove('aktiv')
+  document.getElementById('s-app').classList.add('aktiv')
+  document.getElementById('h-teamname').textContent = Z.account?.name || '—'
+  document.getElementById('h-code').textContent = '——'
+  zeigeSeite('profil')
+}
+
+// ── Profil-Funktionen ────────────────────────────────────────────
+async function ladeProfil() {
+  const res = await fetch('/api/account/info')
+  const d   = await res.json()
+  if (!d.account) return
+
+  Z.account = d.account
+  document.getElementById('pf-name').textContent = d.account.name
+  document.getElementById('pf-punkte').textContent = d.stats?.punkte ?? 0
+  document.getElementById('pf-siege').textContent  = d.stats?.siege  ?? 0
+  document.getElementById('pf-spiele').textContent = d.stats?.spiele ?? 0
+
+  const el = document.getElementById('pf-teams')
+  if (!d.teams.length) {
+    el.innerHTML = '<div class="leer">Noch kein Team — erstelle oder tritt einem bei.</div>'
+  } else {
+    el.innerHTML = d.teams.map(t => `
+      <div class="spieler-item">
+        <div class="sp-links">
+          <div class="avatar">${t.name[0].toUpperCase()}</div>
+          <div>
+            <div class="sp-name">${t.name}</div>
+            <div class="sp-sub">Code: ${t.code}</div>
+          </div>
+        </div>
+        <button class="btn btn-sm" onclick="teamWaehlen('${t.id}','${t.spieler_id}')">Wechseln</button>
+      </div>`).join('')
+  }
+}
+
+async function teamWaehlen(tid, sid) {
+  const [res, d] = await post('/api/team/waehlen', { team_id: tid })
+  if (!res.ok) { toast('Fehler beim Teamwechsel'); return }
+  appStarten(d.team, sid)
+}
+
+async function profilTeamErstellen() {
+  const team_name     = document.getElementById('pf-teamname').value.trim()
+  const team_passwort = document.getElementById('pf-team-pw').value
+  const spieler_name  = document.getElementById('pf-sp-name').value.trim()
+  const alias         = document.getElementById('pf-sp-alias').value.trim()
+  if (!team_name || !team_passwort || !spieler_name) {
+    meldung('m-pf-erstellen', 'Team-Name, Passwort und Spielername nötig.', 'fehler'); return
+  }
+  const [res, d] = await post('/api/team/erstellen', { team_name, team_passwort, spieler_name, alias })
+  if (!res.ok) { meldung('m-pf-erstellen', d.fehler, 'fehler'); return }
   appStarten(d.team, d.spieler.id)
 }
 
-// ── Beitreten ────────────────────────────────────────────────────
-async function teamBeitreten() {
-  const code      = document.getElementById('l-code-b').value.trim()
-  const team_pw   = document.getElementById('l-team-pw-b').value
-  const name      = document.getElementById('l-name-b').value.trim()
-  const alias     = document.getElementById('l-alias-b').value.trim()
-  const passwort  = document.getElementById('l-pw-b').value
-
-  if (!code || !team_pw || !name || !passwort) {
-    meldung('m-l3', 'Alle Felder ausfüllen.', 'fehler'); return
+async function profilTeamBeitreten() {
+  const code          = document.getElementById('pf-join-code').value.trim()
+  const team_passwort = document.getElementById('pf-join-pw').value
+  const spieler_name  = document.getElementById('pf-join-name').value.trim()
+  const alias         = document.getElementById('pf-join-alias').value.trim()
+  if (!code || !team_passwort) {
+    meldung('m-pf-beitreten', 'Team-Code und Passwort nötig.', 'fehler'); return
   }
-  const [res, d] = await post('/api/team/beitreten', { code, team_passwort: team_pw, spieler_name: name, alias, passwort })
-  if (!res.ok) { meldung('m-l3', d.fehler, 'fehler'); return }
+  const [res, d] = await post('/api/team/beitreten', { code, team_passwort, spieler_name, alias })
+  if (!res.ok) { meldung('m-pf-beitreten', d.fehler, 'fehler'); return }
   appStarten(d.team, d.spieler.id)
 }
 
-// ── Gast übernehmen ──────────────────────────────────────────────
-async function gastUebernehmen() {
-  const claim_code = document.getElementById('l-claim').value.trim()
-  const name       = document.getElementById('l-name-u').value.trim()
-  const alias      = document.getElementById('l-alias-u').value.trim()
-  const passwort   = document.getElementById('l-pw-u').value
-
-  if (!claim_code || !name || !passwort) {
-    meldung('m-l4', 'Alle Felder ausfüllen.', 'fehler'); return
-  }
-  const [res, d] = await post('/api/gast/uebernehmen', { claim_code, spieler_name: name, alias, passwort })
-  if (!res.ok) { meldung('m-l4', d.fehler, 'fehler'); return }
+async function profilGastUebernehmen() {
+  const claim_code = document.getElementById('pf-claim').value.trim()
+  if (!claim_code) { meldung('m-pf-claim', 'Claim-Code eingeben.', 'fehler'); return }
+  const [res, d] = await post('/api/gast/uebernehmen', { claim_code })
+  if (!res.ok) { meldung('m-pf-claim', d.fehler, 'fehler'); return }
   appStarten(d.team, d.spieler.id)
-  toast('Account übernommen! Deine Punkte sind erhalten. 🎉')
+  toast('Account übernommen! Punkte erhalten.')
 }
 
 // ── App starten ──────────────────────────────────────────────────
 function appStarten(team, sid) {
-  Z.team = team
+  Z.team       = team
   Z.spieler_id = sid
 
-  const teamNameEl = document.getElementById('h-teamname')
-  const codeEl     = document.getElementById('h-code')
-
-  if (teamNameEl) teamNameEl.textContent = team.name
-  if (codeEl)     codeEl.textContent     = team.code
+  document.getElementById('h-teamname').textContent = team.name
+  document.getElementById('h-code').textContent     = team.code
 
   document.getElementById('s-login').classList.remove('aktiv')
   document.getElementById('s-app').classList.add('aktiv')
   allesDaten()
+  zeigeSeite('home')
 }
 
 async function abmelden() {
   await fetch('/api/abmelden', { method: 'POST' })
-  Z = { team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random' }
+  Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random' }
   document.getElementById('s-app').classList.remove('aktiv')
   document.getElementById('s-login').classList.add('aktiv')
 }
@@ -596,11 +647,13 @@ function zeigeSeite(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('aktiv'))
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('aktiv'))
   document.getElementById('p-' + name).classList.add('aktiv')
-  document.querySelectorAll('.nav-item')[{home:0,spieler:1,spieltag:2,ranking:3}[name]].classList.add('aktiv')
+  const idx = {home:0, spieler:1, spieltag:2, ranking:3, profil:4}[name]
+  if (idx !== undefined) document.querySelectorAll('.nav-item')[idx].classList.add('aktiv')
   if (name === 'home')     renderHome()
   if (name === 'spieler')  renderSpielerSeite()
   if (name === 'spieltag') ladeSpieltag()
   if (name === 'ranking')  ladeRanking()
+  if (name === 'profil')   ladeProfil()
 }
 
 // ── Daten laden ──────────────────────────────────────────────────
@@ -775,7 +828,6 @@ function renderTurnier() {
             <input type="number" id="t1-${m.id}" placeholder="0" min="0">
             <div class="ergebnis-div">:</div>
             <input type="number" id="t2-${m.id}" placeholder="0" min="0">
-            <button class="btn btn-sm" onclick="ergebnisEintragen('${m.id}')">✓</button>
           </div>`
       }
     </div>`
@@ -837,26 +889,33 @@ function renderTurnier() {
     })
 }
 
-// ── Ergebnis eintragen ───────────────────────────────────────────
-async function ergebnisEintragen(mid) {
-  const t1 = document.getElementById('t1-' + mid).value
-  const t2 = document.getElementById('t2-' + mid).value
-  if (t1 === '' || t2 === '') { toast('Beide Tore eingeben!'); return }
-
-  const [res, d] = await post('/api/spieltag/ergebnis', {
-    match_id: mid, tore_team1: parseInt(t1), tore_team2: parseInt(t2)
+// ── Ergebnisse speichern (alle offenen auf einmal) ───────────────
+async function alleErgebnisseSpeichern() {
+  const ergebnisse = []
+  document.querySelectorAll('#st-matches .match-karte').forEach(karte => {
+    const t1el = karte.querySelector('[id^="t1-"]')
+    const t2el = karte.querySelector('[id^="t2-"]')
+    if (!t1el || !t2el) return
+    const mid = t1el.id.replace('t1-', '')
+    const t1  = t1el.value
+    const t2  = t2el.value
+    if (t1 !== '' && t2 !== '') {
+      ergebnisse.push({ match_id: mid, tore_team1: parseInt(t1), tore_team2: parseInt(t2) })
+    }
   })
+  if (!ergebnisse.length) { toast('Keine ausgefüllten Ergebnisse gefunden.'); return }
+
+  const [res, d] = await post('/api/spieltag/ergebnis', ergebnisse)
   if (!res.ok) { toast('Fehler beim Speichern.'); return }
 
   await ladeSpieler()
-  // Spieltag neu laden
   const res2 = await fetch('/api/spieltag/aktiv')
   const d2   = await res2.json()
   if (d2.aktiv) {
     Z.spieltag = d2.spieltag
     renderTurnier()
-    if (d.naechste_runde) toast('🎉 Runde abgeschlossen! Nächste Runde startet.')
-    else toast('Ergebnis gespeichert!')
+    if (d.naechste_runde) toast('Runde abgeschlossen! Nächste Runde startet.')
+    else toast(`${ergebnisse.length} Ergebnis${ergebnisse.length > 1 ? 'se' : ''} gespeichert!`)
   }
 }
 
@@ -935,7 +994,18 @@ async function renderHome() {
 async function init() {
   const res = await fetch('/api/session')
   const d   = await res.json()
-  if (d.eingeloggt) appStarten(d.team, d.spieler_id)
+  if (!d.eingeloggt) return
+  Z.account = d.account
+  if (d.team) {
+    appStarten(d.team, d.spieler_id)
+  } else {
+    // Account eingeloggt, aber kein Team gewählt
+    document.getElementById('s-login').classList.remove('aktiv')
+    document.getElementById('s-app').classList.add('aktiv')
+    document.getElementById('h-teamname').textContent = d.account?.name || '—'
+    document.getElementById('h-code').textContent = '——'
+    zeigeSeite('profil')
+  }
 }
 init()
 

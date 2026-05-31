@@ -6,6 +6,8 @@ import sqlite3
 import uuid
 import random
 import string
+import json
+from datetime import datetime
 from itertools import combinations
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
@@ -81,6 +83,40 @@ def initialisiere_db():
         )
     """)
 
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS spieltag_archiv (
+            id TEXT PRIMARY KEY,
+            spieltag_id TEXT NOT NULL,
+            team_id TEXT NOT NULL,
+            modus TEXT NOT NULL,
+            gesamt_runden INTEGER NOT NULL,
+            ranking_json TEXT NOT NULL,
+            teams_json TEXT NOT NULL,
+            beendet_am TEXT NOT NULL
+        )
+    """)
+
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS accounts (
+            id TEXT PRIMARY KEY,
+            name TEXT UNIQUE NOT NULL,
+            passwort_hash TEXT NOT NULL,
+            erstellt_am TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS account_team (
+            account_id TEXT NOT NULL,
+            team_id TEXT NOT NULL,
+            spieler_id TEXT NOT NULL,
+            PRIMARY KEY (account_id, team_id),
+            FOREIGN KEY (account_id) REFERENCES accounts(id),
+            FOREIGN KEY (team_id) REFERENCES teams(id),
+            FOREIGN KEY (spieler_id) REFERENCES spieler(id)
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -122,6 +158,108 @@ def team_per_id(tid):
     row  = conn.execute("SELECT id,name,code FROM teams WHERE id=?", (tid,)).fetchone()
     conn.close()
     return dict(row) if row else None
+
+
+# ══ Accounts ═══════════════════════════════════════════════════════
+
+def account_registrieren(name, passwort):
+    conn = verbindung()
+    if conn.execute("SELECT id FROM accounts WHERE LOWER(name)=LOWER(?)", (name,)).fetchone():
+        conn.close()
+        return None, "Dieser Name ist bereits vergeben"
+    aid     = str(uuid.uuid4())[:8]
+    pw_hash = generate_password_hash(passwort)
+    conn.execute("INSERT INTO accounts (id, name, passwort_hash) VALUES (?,?,?)", (aid, name, pw_hash))
+    conn.commit()
+    row = conn.execute("SELECT id, name, erstellt_am FROM accounts WHERE id=?", (aid,)).fetchone()
+    conn.close()
+    return dict(row), None
+
+
+def account_einloggen(name, passwort):
+    conn = verbindung()
+    row  = conn.execute("SELECT * FROM accounts WHERE LOWER(name)=LOWER(?)", (name,)).fetchone()
+    conn.close()
+    if not row:
+        return None, "Name oder Passwort falsch"
+    acc = dict(row)
+    if not check_password_hash(acc['passwort_hash'], passwort):
+        return None, "Name oder Passwort falsch"
+    acc.pop('passwort_hash', None)
+    return acc, None
+
+
+def account_per_id(account_id):
+    conn = verbindung()
+    row  = conn.execute("SELECT id, name, erstellt_am FROM accounts WHERE id=?", (account_id,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def account_teams(account_id):
+    conn = verbindung()
+    rows = conn.execute(
+        """SELECT t.id, t.name, t.code, at.spieler_id
+           FROM account_team at
+           JOIN teams t ON t.id = at.team_id
+           WHERE at.account_id=?""",
+        (account_id,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def account_stats_aktualisieren(account_id):
+    """Gibt aggregierte Stats über alle Teams des Accounts zurück."""
+    conn = verbindung()
+    row  = conn.execute(
+        """SELECT COALESCE(SUM(s.punkte),0) AS punkte,
+                  COALESCE(SUM(s.spiele),0) AS spiele,
+                  COALESCE(SUM(s.siege),0)  AS siege
+           FROM account_team at
+           JOIN spieler s ON s.id = at.spieler_id
+           WHERE at.account_id=?""",
+        (account_id,)
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else {'punkte': 0, 'spiele': 0, 'siege': 0}
+
+
+def account_team_verknuepfen(account_id, team_id, spieler_id):
+    conn = verbindung()
+    conn.execute(
+        "INSERT OR REPLACE INTO account_team (account_id, team_id, spieler_id) VALUES (?,?,?)",
+        (account_id, team_id, spieler_id)
+    )
+    conn.commit()
+    conn.close()
+
+
+def team_beitreten(account_id, code, team_passwort, spieler_name, alias):
+    """Account tritt einem bestehenden Team bei und erhält einen Spieler-Eintrag."""
+    team = team_per_code(code)
+    if not team:
+        return None, None, "Team nicht gefunden"
+    if not team_passwort_pruefen(team, team_passwort):
+        return None, None, "Team-Passwort falsch"
+
+    conn = verbindung()
+    existing = conn.execute(
+        "SELECT spieler_id FROM account_team WHERE account_id=? AND team_id=?",
+        (account_id, team['id'])
+    ).fetchone()
+    conn.close()
+    if existing:
+        return None, None, "Du bist bereits Mitglied dieses Teams"
+
+    acc = account_per_id(account_id)
+    name = spieler_name.strip() or acc['name']
+    spieler, fehler = spieler_registrieren(name, alias, str(uuid.uuid4()), team['id'])
+    if fehler:
+        return None, None, fehler
+
+    account_team_verknuepfen(account_id, team['id'], spieler['id'])
+    return team, spieler, None
 
 
 # ══ Spieler ════════════════════════════════════════════════════════
@@ -186,7 +324,8 @@ def spieler_als_gast(name, alias, team_id):
     return sp, None
 
 
-def gast_uebernehmen(claim_code, neuer_name, neuer_alias, passwort):
+def gast_uebernehmen(claim_code, account_id):
+    """Übernimmt einen Gast-Spieler und verknüpft ihn mit dem Account."""
     conn = verbindung()
     row  = conn.execute(
         "SELECT * FROM spieler WHERE claim_code=? AND ist_gast=1",
@@ -194,18 +333,19 @@ def gast_uebernehmen(claim_code, neuer_name, neuer_alias, passwort):
     ).fetchone()
     if not row:
         conn.close()
-        return None, "Ungültiger oder bereits verwendeter Code"
+        return None, None, "Ungültiger oder bereits verwendeter Code"
 
-    sp    = dict(row)
-    alias = neuer_alias.strip() or neuer_name
+    sp = dict(row)
     conn.execute(
-        "UPDATE spieler SET name=?,alias=?,passwort_hash=?,ist_gast=0,claim_code=NULL WHERE id=?",
-        (neuer_name, alias, generate_password_hash(passwort), sp['id'])
+        "UPDATE spieler SET ist_gast=0, claim_code=NULL WHERE id=?",
+        (sp['id'],)
     )
     conn.commit()
     result = _sp_ohne_hash(conn, sp['id'])
     conn.close()
-    return result, None
+
+    account_team_verknuepfen(account_id, sp['team_id'], sp['id'])
+    return team_per_id(sp['team_id']), result, None
 
 
 def _sp_ohne_hash(conn, sid):
@@ -451,11 +591,125 @@ def ergebnis_eintragen(match_id, tore1, tore2):
     return naechste_runde_bereit
 
 
+def ergebnisse_eintragen_bulk(ergebnisse):
+    """Trägt eine Liste von Ergebnissen atomar in einer einzigen Transaktion ein."""
+    conn = verbindung()
+    spieltag_id = None
+
+    for e in ergebnisse:
+        row = conn.execute("SELECT * FROM matches WHERE id=?", (e['match_id'],)).fetchone()
+        if not row:
+            conn.close()
+            raise ValueError(f"Match {e['match_id']} nicht gefunden")
+        m = dict(row)
+        if m['status'] == 'gespielt':
+            continue
+
+        t1, t2 = int(e['tore_team1']), int(e['tore_team2'])
+        if t1 > t2:   p1, p2, s1, s2 = 3, 0, 1, 0
+        elif t2 > t1: p1, p2, s1, s2 = 0, 3, 0, 1
+        else:          p1, p2, s1, s2 = 1, 1, 0, 0
+
+        for sid in [m['team1_s1_id'], m['team1_s2_id']]:
+            conn.execute("UPDATE spieler SET punkte=punkte+?,spiele=spiele+1,siege=siege+? WHERE id=?", (p1, s1, sid))
+        for sid in [m['team2_s1_id'], m['team2_s2_id']]:
+            conn.execute("UPDATE spieler SET punkte=punkte+?,spiele=spiele+1,siege=siege+? WHERE id=?", (p2, s2, sid))
+
+        conn.execute(
+            "UPDATE matches SET tore_team1=?,tore_team2=?,status='gespielt' WHERE id=?",
+            (t1, t2, e['match_id'])
+        )
+        spieltag_id = m['spieltag_id']
+
+    conn.commit()
+
+    naechste_runde = False
+    if spieltag_id:
+        st    = dict(conn.execute("SELECT * FROM spieltage WHERE id=?", (spieltag_id,)).fetchone())
+        offen = conn.execute(
+            "SELECT COUNT(*) FROM matches WHERE spieltag_id=? AND runde=? AND status='offen'",
+            (spieltag_id, st['aktuelle_runde'])
+        ).fetchone()[0]
+        if offen == 0 and st['aktuelle_runde'] < st['gesamt_runden']:
+            conn.execute("UPDATE spieltage SET aktuelle_runde=aktuelle_runde+1 WHERE id=?", (spieltag_id,))
+            conn.commit()
+            naechste_runde = True
+
+    conn.close()
+    return naechste_runde
+
+
+def spieltag_archivieren(spieltag_id):
+    """Speichert Abschluss-Snapshot eines Spieltages (wird von spieltag_beenden aufgerufen)."""
+    conn = verbindung()
+    st = conn.execute("SELECT * FROM spieltage WHERE id=?", (spieltag_id,)).fetchone()
+    if not st:
+        conn.close()
+        return
+    st = dict(st)
+
+    # Alle beteiligten Spieler ermitteln
+    rows = conn.execute(
+        """SELECT DISTINCT sid FROM (
+            SELECT team1_s1_id AS sid FROM matches WHERE spieltag_id=?
+            UNION SELECT team1_s2_id FROM matches WHERE spieltag_id=?
+            UNION SELECT team2_s1_id FROM matches WHERE spieltag_id=?
+            UNION SELECT team2_s2_id FROM matches WHERE spieltag_id=?
+        )""",
+        (spieltag_id, spieltag_id, spieltag_id, spieltag_id)
+    ).fetchall()
+
+    spieler_ranking = []
+    for r in rows:
+        sp = conn.execute(
+            "SELECT id,name,alias,punkte,spiele,siege FROM spieler WHERE id=?", (r[0],)
+        ).fetchone()
+        if sp:
+            spieler_ranking.append(dict(sp))
+    spieler_ranking.sort(key=lambda s: (s['punkte'], s['siege']), reverse=True)
+    conn.close()
+
+    team_ranking = spieltag_team_ranking(spieltag_id)
+
+    conn2 = verbindung()
+    archiv_id  = str(uuid.uuid4())[:8]
+    beendet_am = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+    conn2.execute(
+        """INSERT INTO spieltag_archiv
+           (id, spieltag_id, team_id, modus, gesamt_runden, ranking_json, teams_json, beendet_am)
+           VALUES (?,?,?,?,?,?,?,?)""",
+        (archiv_id, spieltag_id, st['team_id'], st['modus'], st['gesamt_runden'],
+         json.dumps(spieler_ranking), json.dumps(team_ranking), beendet_am)
+    )
+    conn2.commit()
+    conn2.close()
+
+
 def spieltag_beenden(spieltag_id):
+    spieltag_archivieren(spieltag_id)
     conn = verbindung()
     conn.execute("UPDATE spieltage SET status='beendet' WHERE id=?", (spieltag_id,))
     conn.commit()
     conn.close()
+
+
+def spieltag_archiv_alle(team_id):
+    """Gibt alle archivierten Spieltage eines Teams zurück."""
+    conn  = verbindung()
+    rows  = conn.execute(
+        "SELECT * FROM spieltag_archiv WHERE team_id=? ORDER BY beendet_am DESC",
+        (team_id,)
+    ).fetchall()
+    conn.close()
+    ergebnis = []
+    for r in rows:
+        r = dict(r)
+        r['ranking'] = json.loads(r['ranking_json'])
+        r['teams']   = json.loads(r['teams_json'])
+        del r['ranking_json']
+        del r['teams_json']
+        ergebnis.append(r)
+    return ergebnis
 
 
 def aktiver_spieltag(team_id):
@@ -537,34 +791,3 @@ def spieltag_team_ranking(spieltag_id):
     sortiert = sorted(teams.values(), key=lambda t: (t['punkte'], t['siege']), reverse=True)
     return sortiert
 
-def spieltag_team_ranking(spieltag_id):
-    conn = verbindung()
-    matches = conn.execute(
-        "SELECT * FROM matches WHERE spieltag_id=? AND status='gespielt'",
-        (spieltag_id,)
-    ).fetchall()
-
-    teams = {}
-    for m in matches:
-        m = dict(m)
-        if m['tore_team1'] > m['tore_team2']:   p1,p2,s1,s2 = 3,0,1,0
-        elif m['tore_team2'] > m['tore_team1']: p1,p2,s1,s2 = 0,3,0,1
-        else:                                    p1,p2,s1,s2 = 1,1,0,0
-
-        def sp_info(sid):
-            r = conn.execute("SELECT alias, ist_gast FROM spieler WHERE id=?", (sid,)).fetchone()
-            return dict(r) if r else {'alias': '?', 'ist_gast': 0}
-
-        key1 = tuple(sorted([m['team1_s1_id'], m['team1_s2_id']]))
-        key2 = tuple(sorted([m['team2_s1_id'], m['team2_s2_id']]))
-
-        if key1 not in teams:
-            teams[key1] = {'spieler': [sp_info(m['team1_s1_id']), sp_info(m['team1_s2_id'])], 'punkte':0,'siege':0,'spiele':0}
-        if key2 not in teams:
-            teams[key2] = {'spieler': [sp_info(m['team2_s1_id']), sp_info(m['team2_s2_id'])], 'punkte':0,'siege':0,'spiele':0}
-
-        teams[key1]['punkte'] += p1; teams[key1]['siege'] += s1; teams[key1]['spiele'] += 1
-        teams[key2]['punkte'] += p2; teams[key2]['siege'] += s2; teams[key2]['spiele'] += 1
-
-    conn.close()
-    return sorted(teams.values(), key=lambda t: (t['punkte'], t['siege']), reverse=True)
