@@ -16,6 +16,7 @@ from datenbank import (
     account_registrieren, account_einloggen, account_per_id,
     account_teams, account_stats_aktualisieren,
     account_team_verknuepfen, team_beitreten,
+    account_alias_aendern,
 )
 import secrets
 
@@ -38,14 +39,15 @@ def index():
 
 @app.route("/api/account/registrieren", methods=["POST"])
 def api_account_registrieren():
-    d       = request.get_json()
-    name    = d.get("name", "").strip()
+    d        = request.get_json()
+    name     = d.get("name", "").strip()
     passwort = d.get("passwort", "")
+    alias    = d.get("alias", "").strip()
     if not name or not passwort:
         return jsonify({"fehler": "Name und Passwort sind Pflicht"}), 400
     if len(passwort) < 4:
         return jsonify({"fehler": "Passwort mind. 4 Zeichen"}), 400
-    acc, fehler = account_registrieren(name, passwort)
+    acc, fehler = account_registrieren(name, passwort, alias)
     if fehler:
         return jsonify({"fehler": fehler}), 400
     session['account_id'] = acc['id']
@@ -80,6 +82,19 @@ def api_account_info():
     teams = account_teams(aid)
     stats = account_stats_aktualisieren(aid)
     return jsonify({"account": acc, "teams": teams, "stats": stats})
+
+
+@app.route("/api/account/alias", methods=["POST"])
+def api_alias_aendern():
+    aid = session.get('account_id')
+    if not aid:
+        return jsonify({"fehler": "Nicht eingeloggt"}), 401
+    d = request.get_json()
+    alias = d.get("alias", "").strip()
+    if not alias:
+        return jsonify({"fehler": "Alias darf nicht leer sein"}), 400
+    acc = account_alias_aendern(aid, alias)
+    return jsonify({"account": acc})
 
 
 # ══ Team erstellen ══════════════════════════════════════════════════

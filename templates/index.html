@@ -148,6 +148,13 @@
     .info-box strong{color:var(--g)}
     .toast{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);background:var(--g);color:var(--d);padding:8px 20px;border-radius:20px;font-size:13px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:999;white-space:nowrap}
     .toast.show{opacity:1}
+
+    /* ── Profil Aktions-Buttons ──────────────────────────────────── */
+    .pf-aktion-btn{flex:1;background:var(--k2);border:1px solid var(--r);border-radius:12px;padding:12px 6px;cursor:pointer;text-align:center;transition:.2s;display:flex;flex-direction:column;align-items:center;gap:5px}
+    .pf-aktion-btn.aktiv{border-color:var(--g);background:rgba(0,230,118,.08)}
+    .pf-aktion-icon{font-size:20px;line-height:1}
+    .pf-aktion-label{font-size:10px;font-weight:600;color:var(--tg);letter-spacing:.5px}
+    .pf-aktion-btn.aktiv .pf-aktion-label{color:var(--g)}
   </style>
 </head>
 <body>
@@ -167,7 +174,8 @@
 
     <!-- Registrieren -->
     <div id="lf-registrieren">
-      <input type="text" id="l-name-r" placeholder="Dein Name">
+      <input type="text" id="l-name-r" placeholder="Benutzername (zum Einloggen)">
+      <input type="text" id="l-alias-r" placeholder="Anzeigename / Alias (opt.)">
       <div class="pw-wrap">
         <input type="password" id="l-pw-r" placeholder="Passwort (mind. 4 Zeichen)">
         <button class="pw-auge" onclick="togglePw('l-pw-r',this)" tabindex="-1">👁</button>
@@ -205,21 +213,44 @@
 
   <div style="flex:1;overflow-y:auto;padding:18px">
 
+    <!-- Account-Bild + Info -->
+    <div style="text-align:center;margin-bottom:18px">
+      <div style="display:inline-block;cursor:pointer" onclick="pfInfoToggle()">
+        <svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="40" cy="40" r="40" fill="#2a2a2a"/>
+          <circle cx="40" cy="31" r="14" fill="#555"/>
+          <ellipse cx="40" cy="68" rx="22" ry="16" fill="#555"/>
+        </svg>
+      </div>
+      <div id="pf-alias-anzeige" style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:var(--t);margin-top:8px"></div>
+    </div>
+
+    <!-- Info-Bereich (zugeklappt) -->
+    <div id="pf-info-bereich" style="display:none">
+      <div class="karte" style="margin-bottom:14px">
+        <div class="karte-titel">Mein Account</div>
+        <div style="font-size:12px;color:var(--tg);margin-bottom:4px">Benutzername</div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:12px" id="pf-name"></div>
+        <div style="font-size:12px;color:var(--tg);margin-bottom:4px">Alias</div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:14px" id="pf-alias-info"></div>
+        <div class="home-stat" style="margin-bottom:14px">
+          <div><div class="stat-zahl" id="pf-punkte">0</div><div class="stat-label">Punkte</div></div>
+          <div><div class="stat-zahl" id="pf-siege">0</div><div class="stat-label">Siege</div></div>
+          <div><div class="stat-zahl" id="pf-spiele">0</div><div class="stat-label">Spiele</div></div>
+        </div>
+        <div style="border-top:1px solid var(--r);padding-top:14px">
+          <div style="font-size:12px;color:var(--tg);margin-bottom:6px">Alias ändern</div>
+          <input type="text" id="pf-alias-input" placeholder="Neuer Alias">
+          <div id="m-pf-alias" class="meldung"></div>
+          <button class="btn" onclick="aliasSpeichern()">Alias speichern</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Info wenn kein Team -->
     <div id="pf-kein-team-info" class="info-box" style="display:none">
       <strong>Kein Team vorhanden</strong><br>
       Trete einem Team bei oder erstelle eines um loszulegen!
-    </div>
-
-    <!-- Account Stats -->
-    <div class="karte">
-      <div class="karte-titel">Mein Account</div>
-      <div class="home-stat">
-        <div><div class="stat-zahl" id="pf-punkte">0</div><div class="stat-label">Punkte</div></div>
-        <div><div class="stat-zahl" id="pf-siege">0</div><div class="stat-label">Siege</div></div>
-        <div><div class="stat-zahl" id="pf-spiele">0</div><div class="stat-label">Spiele</div></div>
-      </div>
-      <div style="font-size:12px;color:var(--tg);text-align:center;margin-top:4px" id="pf-name"></div>
     </div>
 
     <!-- Meine Teams -->
@@ -230,45 +261,74 @@
       <div id="pf-teams"><div class="leer">Noch kein Team.</div></div>
     </div>
 
-    <!-- Team erstellen -->
-    <div class="karte">
-      <div class="karte-titel">Team erstellen</div>
-      <input type="text" id="pf-teamname" placeholder="Team-Name">
-      <div class="pw-wrap">
-        <input type="password" id="pf-team-pw" placeholder="Team-Passwort (mind. 4 Zeichen)">
-        <button class="pw-auge" onclick="togglePw('pf-team-pw',this)" tabindex="-1">👁</button>
+    <!-- Team-Aktions-Leiste -->
+    <div class="karte" style="padding:12px">
+      <div style="display:flex;gap:8px;justify-content:space-around">
+        <button class="pf-aktion-btn" id="btn-aktion-erstellen" onclick="pfAktionToggle('erstellen')">
+          <div class="pf-aktion-icon">✚</div>
+          <div class="pf-aktion-label">Erstellen</div>
+        </button>
+        <button class="pf-aktion-btn" id="btn-aktion-beitreten" onclick="pfAktionToggle('beitreten')">
+          <div class="pf-aktion-icon">→</div>
+          <div class="pf-aktion-label">Beitreten</div>
+        </button>
+        <button class="pf-aktion-btn" id="btn-aktion-gast" onclick="pfAktionToggle('gast')">
+          <div class="pf-aktion-icon">📋→</div>
+          <div class="pf-aktion-label">Gast-Übernehmen</div>
+        </button>
       </div>
-      <div class="row" style="margin-bottom:8px">
-        <input type="text" id="pf-sp-name" placeholder="Dein Spielername" style="margin-bottom:0">
-        <input type="text" id="pf-sp-alias" placeholder="Alias (opt.)" style="margin-bottom:0">
+
+      <!-- Formular: Erstellen -->
+      <div id="pf-form-erstellen" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--r)">
+        <div class="karte-titel">Team erstellen</div>
+        <input type="text" id="pf-teamname" placeholder="Team-Name">
+        <div class="pw-wrap">
+          <input type="password" id="pf-team-pw" placeholder="Team-Passwort (mind. 4 Zeichen)">
+          <button class="pw-auge" onclick="togglePw('pf-team-pw',this)" tabindex="-1">👁</button>
+        </div>
+        <div id="m-pf-erstellen" class="meldung"></div>
+        <button class="btn" onclick="profilTeamErstellen()">Team erstellen</button>
       </div>
-      <div id="m-pf-erstellen" class="meldung"></div>
-      <button class="btn" onclick="profilTeamErstellen()">Team erstellen</button>
+
+      <!-- Formular: Beitreten -->
+      <div id="pf-form-beitreten" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--r)">
+        <div class="karte-titel">Team beitreten</div>
+        <input type="text" id="pf-join-code" placeholder="Team-Code" style="text-transform:uppercase;letter-spacing:2px">
+        <div class="pw-wrap">
+          <input type="password" id="pf-join-pw" placeholder="Team-Passwort">
+          <button class="pw-auge" onclick="togglePw('pf-join-pw',this)" tabindex="-1">👁</button>
+        </div>
+        <div id="m-pf-beitreten" class="meldung"></div>
+        <button class="btn-outline" onclick="profilTeamBeitreten()">Beitreten</button>
+      </div>
+
+      <!-- Formular: Gast übernehmen -->
+      <div id="pf-form-gast" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--r)">
+        <div class="karte-titel">Gast-Account übernehmen</div>
+        <p class="hinweis">Alle bisherigen Punkte bleiben erhalten!</p>
+        <input type="text" id="pf-claim" placeholder="Claim-Code" style="text-transform:uppercase;letter-spacing:2px">
+        <div id="m-pf-claim" class="meldung"></div>
+        <button class="btn-gast" onclick="profilGastUebernehmen()">Übernehmen</button>
+      </div>
     </div>
 
-    <!-- Team beitreten -->
-    <div class="karte">
-      <div class="karte-titel">Team beitreten</div>
-      <input type="text" id="pf-join-code" placeholder="Team-Code" style="text-transform:uppercase;letter-spacing:2px">
-      <div class="pw-wrap">
-        <input type="password" id="pf-join-pw" placeholder="Team-Passwort">
-        <button class="pw-auge" onclick="togglePw('pf-join-pw',this)" tabindex="-1">👁</button>
+    <!-- Über COURTLINK -->
+    <div style="margin-bottom:14px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--g);margin-bottom:12px">Über COURTLINK</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:120px;background:rgba(0,150,255,0.08);border:1px solid rgba(0,150,255,0.25);border-radius:12px;padding:16px">
+          <h3 style="font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:1px;color:var(--t);margin-bottom:8px"><!-- TITEL HIER EINFÜGEN --></h3>
+          <p style="font-size:12px;color:var(--tg);line-height:1.6"><!-- TEXT HIER EINFÜGEN --></p>
+        </div>
+        <div style="flex:1;min-width:120px;background:rgba(0,150,255,0.08);border:1px solid rgba(0,150,255,0.25);border-radius:12px;padding:16px">
+          <h3 style="font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:1px;color:var(--t);margin-bottom:8px"><!-- TITEL HIER EINFÜGEN --></h3>
+          <p style="font-size:12px;color:var(--tg);line-height:1.6"><!-- TEXT HIER EINFÜGEN --></p>
+        </div>
+        <div style="flex:1;min-width:120px;background:rgba(0,150,255,0.08);border:1px solid rgba(0,150,255,0.25);border-radius:12px;padding:16px">
+          <h3 style="font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:1px;color:var(--t);margin-bottom:8px"><!-- TITEL HIER EINFÜGEN --></h3>
+          <p style="font-size:12px;color:var(--tg);line-height:1.6"><!-- TEXT HIER EINFÜGEN --></p>
+        </div>
       </div>
-      <div class="row" style="margin-bottom:8px">
-        <input type="text" id="pf-join-name" placeholder="Dein Spielername" style="margin-bottom:0">
-        <input type="text" id="pf-join-alias" placeholder="Alias (opt.)" style="margin-bottom:0">
-      </div>
-      <div id="m-pf-beitreten" class="meldung"></div>
-      <button class="btn-outline" onclick="profilTeamBeitreten()">Beitreten</button>
-    </div>
-
-    <!-- Gast übernehmen -->
-    <div class="karte">
-      <div class="karte-titel">Gast-Account übernehmen</div>
-      <p class="hinweis">Alle bisherigen Punkte bleiben erhalten!</p>
-      <input type="text" id="pf-claim" placeholder="Claim-Code" style="text-transform:uppercase;letter-spacing:2px">
-      <div id="m-pf-claim" class="meldung"></div>
-      <button class="btn-gast" onclick="profilGastUebernehmen()">Account übernehmen</button>
     </div>
 
   </div>
@@ -530,9 +590,10 @@ async function post(url, body) {
 // ── Account registrieren ─────────────────────────────────────────
 async function accountRegistrieren() {
   const name     = document.getElementById('l-name-r').value.trim()
+  const alias    = document.getElementById('l-alias-r').value.trim()
   const passwort = document.getElementById('l-pw-r').value
   if (!name || !passwort) { meldung('m-l1', 'Alle Felder ausfüllen.', 'fehler'); return }
-  const [res, d] = await post('/api/account/registrieren', { name, passwort })
+  const [res, d] = await post('/api/account/registrieren', { name, alias, passwort })
   if (!res.ok) { meldung('m-l1', d.fehler, 'fehler'); return }
   Z.account = d.account
   nachLoginWeiterleiten(d.teams)
@@ -585,7 +646,11 @@ async function ladeProfil() {
   if (!d.account) return
 
   Z.account = d.account
+  const alias = d.account.alias || d.account.name
+  document.getElementById('pf-alias-anzeige').textContent = alias
   document.getElementById('pf-name').textContent    = d.account.name
+  document.getElementById('pf-alias-info').textContent = alias
+  document.getElementById('pf-alias-input').value   = alias
   document.getElementById('pf-punkte').textContent  = d.stats?.punkte ?? 0
   document.getElementById('pf-siege').textContent   = d.stats?.siege  ?? 0
   document.getElementById('pf-spiele').textContent  = d.stats?.spiele ?? 0
@@ -610,6 +675,39 @@ async function ladeProfil() {
   }
 }
 
+function pfInfoToggle() {
+  const el = document.getElementById('pf-info-bereich')
+  el.style.display = el.style.display === 'none' ? 'block' : 'none'
+}
+
+function pfAktionToggle(welche) {
+  const formulare = ['erstellen', 'beitreten', 'gast']
+  formulare.forEach(f => {
+    const form = document.getElementById('pf-form-' + f)
+    const btn  = document.getElementById('btn-aktion-' + f)
+    if (f === welche) {
+      const offen = form.style.display !== 'none'
+      form.style.display = offen ? 'none' : 'block'
+      btn.classList.toggle('aktiv', !offen)
+    } else {
+      form.style.display = 'none'
+      btn.classList.remove('aktiv')
+    }
+  })
+}
+
+async function aliasSpeichern() {
+  const alias = document.getElementById('pf-alias-input').value.trim()
+  if (!alias) { meldung('m-pf-alias', 'Alias darf nicht leer sein.', 'fehler'); return }
+  const [res, d] = await post('/api/account/alias', { alias })
+  if (!res.ok) { meldung('m-pf-alias', d.fehler, 'fehler'); return }
+  Z.account = d.account
+  const neuerAlias = d.account.alias || d.account.name
+  document.getElementById('pf-alias-anzeige').textContent = neuerAlias
+  document.getElementById('pf-alias-info').textContent    = neuerAlias
+  meldung('m-pf-alias', 'Alias gespeichert!', 'erfolg')
+}
+
 async function teamWaehlen(tid, sid) {
   const [res, d] = await post('/api/team/waehlen', { team_id: tid })
   if (!res.ok) { toast('Fehler beim Teamwechsel'); return }
@@ -619,10 +717,10 @@ async function teamWaehlen(tid, sid) {
 async function profilTeamErstellen() {
   const team_name     = document.getElementById('pf-teamname').value.trim()
   const team_passwort = document.getElementById('pf-team-pw').value
-  const spieler_name  = document.getElementById('pf-sp-name').value.trim()
-  const alias         = document.getElementById('pf-sp-alias').value.trim()
-  if (!team_name || !team_passwort || !spieler_name) {
-    meldung('m-pf-erstellen', 'Team-Name, Passwort und Spielername nötig.', 'fehler'); return
+  const spieler_name  = Z.account?.name || ''
+  const alias         = Z.account?.alias || spieler_name
+  if (!team_name || !team_passwort) {
+    meldung('m-pf-erstellen', 'Team-Name und Passwort nötig.', 'fehler'); return
   }
   const [res, d] = await post('/api/team/erstellen', { team_name, team_passwort, spieler_name, alias })
   if (!res.ok) { meldung('m-pf-erstellen', d.fehler, 'fehler'); return }
@@ -632,8 +730,8 @@ async function profilTeamErstellen() {
 async function profilTeamBeitreten() {
   const code          = document.getElementById('pf-join-code').value.trim()
   const team_passwort = document.getElementById('pf-join-pw').value
-  const spieler_name  = document.getElementById('pf-join-name').value.trim()
-  const alias         = document.getElementById('pf-join-alias').value.trim()
+  const spieler_name  = Z.account?.name || ''
+  const alias         = Z.account?.alias || spieler_name
   if (!code || !team_passwort) {
     meldung('m-pf-beitreten', 'Team-Code und Passwort nötig.', 'fehler'); return
   }

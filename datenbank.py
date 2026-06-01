@@ -100,10 +100,16 @@ def initialisiere_db():
         CREATE TABLE IF NOT EXISTS accounts (
             id TEXT PRIMARY KEY,
             name TEXT UNIQUE NOT NULL,
+            alias TEXT NOT NULL DEFAULT '',
             passwort_hash TEXT NOT NULL,
             erstellt_am TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    # migration: add alias column to existing databases
+    try:
+        c.execute("ALTER TABLE accounts ADD COLUMN alias TEXT NOT NULL DEFAULT ''")
+    except Exception:
+        pass
 
     c.execute("""
         CREATE TABLE IF NOT EXISTS account_team (
@@ -162,16 +168,17 @@ def team_per_id(tid):
 
 # ══ Accounts ═══════════════════════════════════════════════════════
 
-def account_registrieren(name, passwort):
+def account_registrieren(name, passwort, alias=""):
     conn = verbindung()
     if conn.execute("SELECT id FROM accounts WHERE LOWER(name)=LOWER(?)", (name,)).fetchone():
         conn.close()
         return None, "Dieser Name ist bereits vergeben"
     aid     = str(uuid.uuid4())[:8]
     pw_hash = generate_password_hash(passwort)
-    conn.execute("INSERT INTO accounts (id, name, passwort_hash) VALUES (?,?,?)", (aid, name, pw_hash))
+    eff_alias = alias.strip() or name
+    conn.execute("INSERT INTO accounts (id, name, alias, passwort_hash) VALUES (?,?,?,?)", (aid, name, eff_alias, pw_hash))
     conn.commit()
-    row = conn.execute("SELECT id, name, erstellt_am FROM accounts WHERE id=?", (aid,)).fetchone()
+    row = conn.execute("SELECT id, name, alias, erstellt_am FROM accounts WHERE id=?", (aid,)).fetchone()
     conn.close()
     return dict(row), None
 
@@ -186,12 +193,14 @@ def account_einloggen(name, passwort):
     if not check_password_hash(acc['passwort_hash'], passwort):
         return None, "Name oder Passwort falsch"
     acc.pop('passwort_hash', None)
+    if not acc.get('alias'):
+        acc['alias'] = acc['name']
     return acc, None
 
 
 def account_per_id(account_id):
     conn = verbindung()
-    row  = conn.execute("SELECT id, name, erstellt_am FROM accounts WHERE id=?", (account_id,)).fetchone()
+    row  = conn.execute("SELECT id, name, alias, erstellt_am FROM accounts WHERE id=?", (account_id,)).fetchone()
     conn.close()
     return dict(row) if row else None
 
@@ -233,6 +242,18 @@ def account_team_verknuepfen(account_id, team_id, spieler_id):
     )
     conn.commit()
     conn.close()
+
+
+def account_alias_aendern(account_id, neuer_alias):
+    conn = verbindung()
+    conn.execute(
+        "UPDATE accounts SET alias=? WHERE id=?",
+        (neuer_alias, account_id)
+    )
+    conn.commit()
+    acc = account_per_id(account_id)
+    conn.close()
+    return acc
 
 
 def team_beitreten(account_id, code, team_passwort, spieler_name, alias):
