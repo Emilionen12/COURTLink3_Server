@@ -250,6 +250,11 @@ def account_alias_aendern(account_id, neuer_alias):
         "UPDATE accounts SET alias=? WHERE id=?",
         (neuer_alias, account_id)
     )
+    conn.execute(
+        """UPDATE spieler SET alias=?
+           WHERE id IN (SELECT spieler_id FROM account_team WHERE account_id=?)""",
+        (neuer_alias, account_id)
+    )
     conn.commit()
     acc = account_per_id(account_id)
     conn.close()
