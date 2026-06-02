@@ -181,6 +181,10 @@
         <input type="password" id="l-pw-r" placeholder="Passwort (mind. 4 Zeichen)">
         <button class="pw-auge" onclick="togglePw('l-pw-r',this)" tabindex="-1">👁</button>
       </div>
+      <div class="pw-wrap">
+        <input type="password" id="l-pw-r2" placeholder="Passwort wiederholen">
+        <button class="pw-auge" onclick="togglePw('l-pw-r2',this)" tabindex="-1">👁</button>
+      </div>
       <div id="m-l1" class="meldung"></div>
       <button class="btn" onclick="accountRegistrieren()">Account erstellen</button>
     </div>
@@ -559,7 +563,7 @@ function claimTeilen() {
   navigator.clipboard.writeText(
     `Hey ${name}! Du wurdest zu unserem Padel-Team hinzugefügt 🎾\n\n` +
     `So erstellst du deinen Account:\n` +
-    `1. Öffne die Court Link App\n` +
+    `1. Öffne die Court Link Website: https://courtlink3server-production.up.railway.app \n` +
     `2. Tippe auf den Tab "Übernehmen"\n` +
     `3. Gib deinen Code ein: ${code}\n` +
     `4. Wähle einen Namen und ein Passwort\n\n` +
@@ -591,8 +595,10 @@ async function post(url, body) {
 async function accountRegistrieren() {
   const name     = document.getElementById('l-name-r').value.trim()
   const alias    = document.getElementById('l-alias-r').value.trim()
-  const passwort = document.getElementById('l-pw-r').value
+  const passwort  = document.getElementById('l-pw-r').value
+  const passwort2 = document.getElementById('l-pw-r2').value
   if (!name || !passwort) { meldung('m-l1', 'Alle Felder ausfüllen.', 'fehler'); return }
+  if (passwort !== passwort2) { meldung('m-l1', 'Die Passwörter stimmen nicht überein.', 'fehler'); return }
   const [res, d] = await post('/api/account/registrieren', { name, alias, passwort })
   if (!res.ok) { meldung('m-l1', d.fehler, 'fehler'); return }
   Z.account = d.account
