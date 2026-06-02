@@ -459,9 +459,9 @@ def _round_robin_schedule(teams):
 
 def spieltag_erstellen(team_id, modus, spieler_ids):
     """
-    Erstellt einen Spieltag mit vollständigem Round-Robin-Plan.
-    Alle Runden werden sofort in der DB gespeichert,
-    aber nur Runde 1 ist am Anfang aktiv sichtbar.
+    Erstellt einen Spieltag.
+    Round-Robin: alle Runden sofort gespeichert.
+    Americano:   nur Runde 1 gespeichert; Folgerunden werden dynamisch nach Ergebnissen generiert.
     """
     conn = verbindung()
     placeholders = ','.join('?' * len(spieler_ids))
@@ -477,11 +477,15 @@ def spieltag_erstellen(team_id, modus, spieler_ids):
     if len(spieler_liste) % 2 != 0:
         conn.close()
         return None, "Gerade Anzahl an Spielern nötig"
+    if modus == 'americano' and len(spieler_liste) % 4 != 0:
+        conn.close()
+        return None, "Americano benötigt 4, 8 oder 12 Spieler (gerade Anzahl von 2er-Teams)"
 
-    # 2er-Teams bilden
-    padel_teams = _mische_teams(spieler_liste, modus)
+    # 2er-Teams bilden (Americano nutzt zufällige Formation)
+    formations_modus = 'random' if modus == 'americano' else modus
+    padel_teams = _mische_teams(spieler_liste, formations_modus)
 
-    # Round-Robin-Plan erstellen
+    # Round-Robin-Plan für Gesamtrunden-Berechnung (gilt auch für Americano)
     runden_plan = _round_robin_schedule(padel_teams)
     gesamt_runden = len(runden_plan)
 
@@ -491,8 +495,9 @@ def spieltag_erstellen(team_id, modus, spieler_ids):
         (st_id, team_id, modus, gesamt_runden)
     )
 
-    # Alle Matches aller Runden speichern
-    for runden_nr, runde in enumerate(runden_plan, start=1):
+    # Americano: nur Runde 1 jetzt speichern; Round-Robin: alle Runden sofort
+    runden_zum_speichern = [runden_plan[0]] if modus == 'americano' else runden_plan
+    for runden_nr, runde in enumerate(runden_zum_speichern, start=1):
         for (t1, t2) in runde:
             mid = str(uuid.uuid4())[:8]
             conn.execute("""
@@ -648,20 +653,27 @@ def ergebnisse_eintragen_bulk(ergebnisse):
         spieltag_id = m['spieltag_id']
 
     conn.commit()
+    conn.close()
 
     naechste_runde = False
     if spieltag_id:
-        st    = dict(conn.execute("SELECT * FROM spieltage WHERE id=?", (spieltag_id,)).fetchone())
-        offen = conn.execute(
+        conn2 = verbindung()
+        st    = dict(conn2.execute("SELECT * FROM spieltage WHERE id=?", (spieltag_id,)).fetchone())
+        offen = conn2.execute(
             "SELECT COUNT(*) FROM matches WHERE spieltag_id=? AND runde=? AND status='offen'",
             (spieltag_id, st['aktuelle_runde'])
         ).fetchone()[0]
+        conn2.close()
         if offen == 0 and st['aktuelle_runde'] < st['gesamt_runden']:
-            conn.execute("UPDATE spieltage SET aktuelle_runde=aktuelle_runde+1 WHERE id=?", (spieltag_id,))
-            conn.commit()
+            # Americano: nächste Runde dynamisch generieren bevor Runde hochgezählt wird
+            if st['modus'] == 'americano':
+                spieltag_runde_generieren(spieltag_id)
+            conn3 = verbindung()
+            conn3.execute("UPDATE spieltage SET aktuelle_runde=aktuelle_runde+1 WHERE id=?", (spieltag_id,))
+            conn3.commit()
+            conn3.close()
             naechste_runde = True
 
-    conn.close()
     return naechste_runde
 
 
@@ -816,4 +828,92 @@ def spieltag_team_ranking(spieltag_id):
     # Sortiert nach Punkten, dann Siegen
     sortiert = sorted(teams.values(), key=lambda t: (t['punkte'], t['siege']), reverse=True)
     return sortiert
+
+
+# ══ Americano ══════════════════════════════════════════════════════
+
+def _americano_paarungen(teams_sortiert, gespielt_set):
+    """
+    Greedy-Paarung: Bestes Team bekommt besten verfügbaren Gegner.
+    Vermeidet Rematches soweit möglich; akzeptiert sie falls keine Alternative existiert.
+    teams_sortiert: Liste von (s1_id, s2_id)-Tuples, nach Spieltag-Punkten absteigend.
+    gespielt_set:   set von frozenset({frozenset(team1_ids), frozenset(team2_ids)})
+    """
+    unmatched = list(teams_sortiert)
+    result = []
+    while len(unmatched) >= 2:
+        t1 = unmatched.pop(0)
+        t1_frozen = frozenset(t1)
+        # Ersten verfügbaren Nicht-Rematch-Partner suchen
+        idx = 0
+        while idx < len(unmatched):
+            if frozenset([t1_frozen, frozenset(unmatched[idx])]) not in gespielt_set:
+                break
+            idx += 1
+        if idx >= len(unmatched):
+            idx = 0  # Alle verbleibenden sind Rematches → ersten nehmen
+        t2 = unmatched.pop(idx)
+        result.append((t1, t2))
+    return result
+
+
+def spieltag_runde_generieren(spieltag_id):
+    """Generiert dynamisch die nächste Runde für den Americano-Modus."""
+    conn = verbindung()
+
+    alle = [dict(m) for m in conn.execute(
+        "SELECT * FROM matches WHERE spieltag_id=?", (spieltag_id,)
+    ).fetchall()]
+
+    # Bestehende Paarungen für Rematch-Erkennung
+    gespielt_set = set()
+    for m in alle:
+        k1 = frozenset([m['team1_s1_id'], m['team1_s2_id']])
+        k2 = frozenset([m['team2_s1_id'], m['team2_s2_id']])
+        gespielt_set.add(frozenset([k1, k2]))
+
+    # Alle bekannten 2er-Teams aus bisherigen Matches (inkl. solche mit 0 Punkten)
+    alle_team_keys = set()
+    for m in alle:
+        alle_team_keys.add(tuple(sorted([m['team1_s1_id'], m['team1_s2_id']])))
+        alle_team_keys.add(tuple(sorted([m['team2_s1_id'], m['team2_s2_id']])))
+
+    # Spieltag-Punkte pro 2er-Team berechnen
+    punkte = {k: {'punkte': 0, 'siege': 0} for k in alle_team_keys}
+    for m in alle:
+        if m['status'] != 'gespielt':
+            continue
+        t1_tore, t2_tore = int(m['tore_team1']), int(m['tore_team2'])
+        if t1_tore > t2_tore:   p1, p2, s1, s2 = 3, 0, 1, 0
+        elif t2_tore > t1_tore: p1, p2, s1, s2 = 0, 3, 0, 1
+        else:                    p1, p2, s1, s2 = 1, 1, 0, 0
+        key1 = tuple(sorted([m['team1_s1_id'], m['team1_s2_id']]))
+        key2 = tuple(sorted([m['team2_s1_id'], m['team2_s2_id']]))
+        punkte[key1]['punkte'] += p1
+        punkte[key1]['siege']  += s1
+        punkte[key2]['punkte'] += p2
+        punkte[key2]['siege']  += s2
+
+    # Absteigend sortiert nach Spieltag-Punkten, dann Siegen
+    sortiert = sorted(alle_team_keys,
+                      key=lambda k: (punkte[k]['punkte'], punkte[k]['siege']),
+                      reverse=True)
+
+    aktuelle_runde = conn.execute(
+        "SELECT aktuelle_runde FROM spieltage WHERE id=?", (spieltag_id,)
+    ).fetchone()[0]
+    naechste_runde = aktuelle_runde + 1
+
+    paarungen = _americano_paarungen(sortiert, gespielt_set)
+
+    for (t1, t2) in paarungen:
+        mid = str(uuid.uuid4())[:8]
+        conn.execute("""
+            INSERT INTO matches
+            (id, spieltag_id, runde, team1_s1_id, team1_s2_id, team2_s1_id, team2_s2_id)
+            VALUES (?,?,?,?,?,?,?)
+        """, (mid, spieltag_id, naechste_runde, t1[0], t1[1], t2[0], t2[1]))
+
+    conn.commit()
+    conn.close()
 

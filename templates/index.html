@@ -413,24 +413,20 @@
       <div id="st-start" class="karte">
         <div class="karte-titel">Neues Turnier</div>
         <div class="info-box">
-          <strong>Round-Robin</strong><br>
-          Aus den Spielern werden 2er-Teams gebildet. Jedes Team spielt einmal gegen jedes andere.
-          Runde 2 startet automatisch sobald alle Spiele aus Runde 1 eingetragen sind.
+          <strong>🎲 Zufällig / ⚖️ Ranked:</strong> Round-Robin – alle Paarungen werden vorab festgelegt, jedes Team spielt einmal gegen jedes andere.<br><br>
+          <strong>🏆 Americano:</strong> Paarungen entstehen runde für runde nach Ergebnis – Gewinner spielen gegen Gewinner, Verlierer gegen Verlierer. Benötigt 4, 8 oder 12 Spieler.
         </div>
-        
-        <strong>Modi zur Team-Bildung</strong><br>
-        <strong>🎲 Zufällig:</strong> Die Teams werden zufällig ausgelost.<br>
-        ö<strong>⚖️ Ranked:</strong> Starke und schwache spieler werden in teams aufgeteilt. Dabei wird abernicht nur nach Punkten sortiert, sondern auch mit einem Zufallsfktor gearbeitet.<br>
-        <div class="sec-titel" style="margin-bottom:8px">Team-Bildung</div>
+        <div class="sec-titel" style="margin-bottom:8px">Modus</div>
         <div class="modus-gruppe">
           <div class="modus-btn aktiv" id="mb-random" onclick="modusWaehlen('random')">🎲 Zufällig</div>
           <div class="modus-btn" id="mb-ranked" onclick="modusWaehlen('ranked')">⚖️ Ranked<br><span style="font-size:10px;opacity:.7">Stark + Schwach</span></div>
+          <div class="modus-btn" id="mb-americano" onclick="modusWaehlen('americano')">🏆 Americano<br><span style="font-size:10px;opacity:.7">Gewinner vs Gewinner</span></div>
         </div>
         <div class="sec" style="margin-top:4px">
           <span class="sec-titel">Spieler auswählen</span>
           <span class="badge" id="st-anzahl">0</span>
         </div>
-        <p class="hinweis">Mind. 4 Spieler (gerade Anzahl).</p>
+        <p class="hinweis" id="st-hinweis">Mind. 4 Spieler (gerade Anzahl).</p>
         <div id="st-liste"><div class="leer">Erst Spieler hinzufügen.</div></div>
         <div id="m-st" class="meldung"></div>
         <button class="btn" onclick="spieltagStarten()" style="margin-top:10px">Turnier starten</button>
@@ -867,6 +863,9 @@ function modusWaehlen(m) {
   Z.modus = m
   document.getElementById('mb-random').classList.toggle('aktiv', m === 'random')
   document.getElementById('mb-ranked').classList.toggle('aktiv', m === 'ranked')
+  document.getElementById('mb-americano').classList.toggle('aktiv', m === 'americano')
+  document.getElementById('st-hinweis').textContent =
+    m === 'americano' ? 'Genau 4, 8 oder 12 Spieler wählen.' : 'Mind. 4 Spieler (gerade Anzahl).'
 }
 
 // ── Spieltag laden ───────────────────────────────────────────────
@@ -920,6 +919,9 @@ async function spieltagStarten() {
   const ids = [...document.querySelectorAll('#st-liste input:checked')].map(cb => cb.id.replace('cb-',''))
   if (ids.length < 4)      { meldung('m-st', 'Mindestens 4 Spieler auswählen.', 'fehler'); return }
   if (ids.length % 2 !== 0){ meldung('m-st', 'Gerade Anzahl nötig (4, 6, 8…).', 'fehler'); return }
+  if (Z.modus === 'americano' && ids.length % 4 !== 0) {
+    meldung('m-st', 'Americano benötigt 4, 8 oder 12 Spieler.', 'fehler'); return
+  }
 
   const [res, d] = await post('/api/spieltag/starten', { spieler_ids: ids, modus: Z.modus })
   if (!res.ok) { meldung('m-st', d.fehler, 'fehler'); return }
@@ -1095,7 +1097,7 @@ async function ladeRanking() {
 async function renderHome() {
   await ladeSpieler()
   document.getElementById('h-spieler').textContent = Z.spieler.length
-  document.getElementById('h-matches').textContent = Math.floor(Z.spieler.reduce((a,s)=>a+s.spiele,0)/2)
+  document.getElementById('h-matches').textContent = Math.floor(Z.spieler.reduce((a,s)=>a+s.spiele,0)/4)
   document.getElementById('h-status').textContent  = Z.spieltag ? 'Aktiv' : '—'
 
   // Top 3
@@ -1121,7 +1123,7 @@ async function renderHome() {
     stel.innerHTML = `
       <div class="sp-sub" style="line-height:1.8">
         Runde ${st.aktuelle_runde} von ${st.gesamt_runden}<br>
-        Modus: ${st.modus === 'ranked' ? '⚖️ Ranked' : '🎲 Zufällig'}
+        Modus: ${st.modus === 'ranked' ? '⚖️ Ranked' : st.modus === 'americano' ? '🏆 Americano' : '🎲 Zufällig'}
       </div>`
   } else {
     stel.innerHTML = '<div class="leer" style="padding:8px 0">Kein aktives Turnier.</div>'
