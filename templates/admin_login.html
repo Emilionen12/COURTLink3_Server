@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Court Link Admin</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0a0f1e;color:#F0F0F0;font-family:'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}
+    .box{width:100%;max-width:360px;padding:40px 32px;background:#141414;border:1px solid #2a2a3a;border-radius:16px}
+    h1{font-size:22px;color:#0066B3;letter-spacing:1px;margin-bottom:4px}
+    .sub{font-size:11px;color:#777;letter-spacing:2px;margin-bottom:28px}
+    label{font-size:11px;color:#777;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px}
+    input[type=password]{width:100%;background:#1C1C1C;border:1px solid #272727;border-radius:10px;color:#F0F0F0;font-size:14px;padding:11px 13px;outline:none;transition:.2s;margin-bottom:16px}
+    input[type=password]:focus{border-color:#0066B3}
+    button{width:100%;background:#0066B3;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;padding:12px;cursor:pointer;transition:.15s}
+    button:active{background:#0052A0}
+    .fehler{background:rgba(255,68,68,.12);color:#FF8A80;border:1px solid rgba(255,68,68,.3);border-radius:8px;padding:9px 13px;font-size:13px;margin-bottom:14px}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Court Link</h1>
+    <div class="sub">ADMIN ZUGANG</div>
+    {% if fehler %}
+    <div class="fehler">{{ fehler }}</div>
+    {% endif %}
+    <form method="POST" action="/{{ admin_path }}/login">
+      <label>Passwort</label>
+      <input type="password" name="passwort" autofocus placeholder="Admin-Passwort">
+      <button type="submit">Einloggen</button>
+    </form>
+  </div>
+</body>
+</html>

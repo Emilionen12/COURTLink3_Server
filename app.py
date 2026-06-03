@@ -2,8 +2,10 @@
 app.py — Court Link Flask Backend MOIN moin moin
 """
 import os
+import secrets
+from datetime import datetime
 
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, redirect
 from datenbank import (
     initialisiere_db,
     team_erstellen, team_per_code, team_per_id, team_passwort_pruefen,
@@ -17,13 +19,52 @@ from datenbank import (
     account_teams, account_stats_aktualisieren,
     account_team_verknuepfen, team_beitreten,
     account_alias_aendern,
+    account_ist_admin, team_admin_aendern, team_mitglieder_accounts,
+    admin_statistiken, team_ist_plus,
 )
-import secrets
+
+ADMIN_MASTER_PASSWORT = os.environ.get("ADMIN_PASSWORD", "courtlink_admin_2026")
+ADMIN_PATH = os.environ.get("ADMIN_PATH", "admin_courtlink_2026")
 
 app = Flask(__name__)
-#app.secret_key = secrets.token_hex(16)
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(16))
 initialisiere_db()
+
+# ── Brute-Force Schutz ──────────────────────────────────────────
+admin_login_versuche: dict = {}
+
+def pruefe_brute_force(ip):
+    eintrag = admin_login_versuche.get(ip)
+    if not eintrag:
+        return False
+    versuche, erster_versuch = eintrag
+    delta = (datetime.now() - erster_versuch).total_seconds()
+    if delta > 900:
+        admin_login_versuche.pop(ip, None)
+        return False
+    return versuche >= 5
+
+def registriere_fehlversuch(ip):
+    eintrag = admin_login_versuche.get(ip)
+    if not eintrag:
+        admin_login_versuche[ip] = (1, datetime.now())
+    else:
+        versuche, erster = eintrag
+        admin_login_versuche[ip] = (versuche + 1, erster)
+
+
+# ── HTTPS erzwingen (Railway-kompatibel) ────────────────────────
+@app.before_request
+def https_erzwingen():
+    if not app.debug:
+        proto = request.headers.get('X-Forwarded-Proto', '')
+        if proto == 'http':
+            url = request.url.replace('http://', 'https://', 1)
+            return redirect(url, code=301)
+
+
+def check_plus(team_id):
+    return team_ist_plus(team_id)
 
 
 def team_id():    return session.get('team_id')
@@ -114,12 +155,12 @@ def api_team_erstellen():
     if len(team_pw) < 4:
         return jsonify({"fehler": "Team-Passwort mind. 4 Zeichen"}), 400
 
-    team    = team_erstellen(team_name, team_pw)
+    team    = team_erstellen(team_name, team_pw, account_id())
     spieler, fehler = spieler_registrieren(name, alias, str(__import__('uuid').uuid4()), team['id'])
     if fehler:
         return jsonify({"fehler": fehler}), 400
 
-    account_team_verknuepfen(account_id(), team['id'], spieler['id'])
+    account_team_verknuepfen(account_id(), team['id'], spieler['id'], ist_admin=1)
     session['team_id']    = team['id']
     session['spieler_id'] = spieler['id']
     return jsonify({"team": team, "spieler": spieler})
@@ -239,6 +280,8 @@ def api_spieler_add():
 @app.route("/api/spieler/<sid>", methods=["DELETE"])
 def api_spieler_del(sid):
     if not team_id(): return jsonify({"fehler": "Nicht eingeloggt"}), 401
+    if not account_ist_admin(account_id(), team_id()):
+        return jsonify({"fehler": "Nur der Team-Admin kann Spieler entfernen"}), 403
     spieler_loeschen(sid, team_id())
     return jsonify({"ok": True})
 
@@ -314,7 +357,71 @@ def api_spieltag_team_ranking(st_id):
 def api_spieltag_archiv():
     if not team_id():
         return jsonify({"fehler": "Nicht eingeloggt"}), 401
+    # TODO: PLUS-FEATURE — hier später Plus-Check:
+    # if not check_plus(team_id()): return jsonify({"fehler": "Plus-Feature"}), 403
     return jsonify(spieltag_archiv_alle(team_id()))
+
+
+# ══ Team-Mitglieder & Admin-Übertragung ════════════════════════════
+
+@app.route("/api/team/mitglieder")
+def api_team_mitglieder():
+    if not team_id() or not account_id():
+        return jsonify({"fehler": "Nicht eingeloggt"}), 401
+    return jsonify(team_mitglieder_accounts(team_id()))
+
+
+@app.route("/api/team/<tid>/admin/uebertragen", methods=["POST"])
+def api_admin_uebertragen(tid):
+    if not account_id():
+        return jsonify({"fehler": "Nicht eingeloggt"}), 401
+    if not account_ist_admin(account_id(), tid):
+        return jsonify({"fehler": "Nur der aktuelle Admin kann die Rolle übertragen"}), 403
+    d = request.get_json()
+    neuer_admin_id = d.get("neuer_admin_account_id", "").strip()
+    if not neuer_admin_id:
+        return jsonify({"fehler": "Neue Admin-ID fehlt"}), 400
+    ok, fehler = team_admin_aendern(tid, neuer_admin_id)
+    if not ok:
+        return jsonify({"fehler": fehler}), 400
+    return jsonify({"ok": True})
+
+
+# ══ Admin Dashboard ════════════════════════════════════════════════
+
+@app.route(f"/{ADMIN_PATH}")
+def admin_dashboard():
+    if not session.get('ist_master_admin'):
+        return render_template('admin_login.html', admin_path=ADMIN_PATH)
+    return render_template('admin_dashboard.html', admin_path=ADMIN_PATH)
+
+
+@app.route(f"/{ADMIN_PATH}/login", methods=["POST"])
+def admin_login():
+    ip = request.remote_addr
+    if pruefe_brute_force(ip):
+        return render_template('admin_login.html', admin_path=ADMIN_PATH,
+            fehler="Zu viele Versuche. Bitte 15 Minuten warten.")
+    pw = request.form.get("passwort", "")
+    if pw == ADMIN_MASTER_PASSWORT:
+        session['ist_master_admin'] = True
+        admin_login_versuche.pop(ip, None)
+        return redirect(f'/{ADMIN_PATH}')
+    registriere_fehlversuch(ip)
+    return render_template('admin_login.html', admin_path=ADMIN_PATH, fehler="Falsches Passwort")
+
+
+@app.route(f"/{ADMIN_PATH}/logout", methods=["POST"])
+def admin_logout():
+    session.pop('ist_master_admin', None)
+    return redirect(f'/{ADMIN_PATH}')
+
+
+@app.route("/api/admin/stats")
+def api_admin_stats():
+    if not session.get('ist_master_admin'):
+        return jsonify({"fehler": "Kein Zugriff"}), 403
+    return jsonify(admin_statistiken())
 
 
 

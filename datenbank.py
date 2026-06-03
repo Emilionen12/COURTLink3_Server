@@ -116,11 +116,60 @@ def initialisiere_db():
             account_id TEXT NOT NULL,
             team_id TEXT NOT NULL,
             spieler_id TEXT NOT NULL,
+            ist_admin INTEGER DEFAULT 0,
             PRIMARY KEY (account_id, team_id),
             FOREIGN KEY (account_id) REFERENCES accounts(id),
             FOREIGN KEY (team_id) REFERENCES teams(id),
             FOREIGN KEY (spieler_id) REFERENCES spieler(id)
         )
+    """)
+
+    # Migrationen: neue Spalten zu bestehenden Tabellen
+    for col_def in [
+        "admin_account_id TEXT",
+        "ist_plus INTEGER DEFAULT 0",
+        "plus_bis TEXT DEFAULT NULL",
+    ]:
+        try:
+            c.execute(f"ALTER TABLE teams ADD COLUMN {col_def}")
+        except Exception:
+            pass
+
+    for col_def in [
+        "hat_vereinsabo INTEGER DEFAULT 0",
+        "vereinsabo_bis TEXT DEFAULT NULL",
+        "stripe_id TEXT DEFAULT NULL",
+    ]:
+        try:
+            c.execute(f"ALTER TABLE accounts ADD COLUMN {col_def}")
+        except Exception:
+            pass
+
+    try:
+        c.execute("ALTER TABLE account_team ADD COLUMN ist_admin INTEGER DEFAULT 0")
+    except Exception:
+        pass
+
+    conn.commit()
+
+    # Datenmigration: admin_account_id für bestehende Teams setzen
+    c.execute("""
+        UPDATE teams SET admin_account_id = (
+            SELECT account_id FROM account_team
+            WHERE team_id = teams.id
+            ORDER BY rowid ASC LIMIT 1
+        )
+        WHERE admin_account_id IS NULL
+    """)
+
+    # ist_admin = 1 für bestehende Admins setzen
+    c.execute("""
+        UPDATE account_team SET ist_admin = 1
+        WHERE EXISTS (
+            SELECT 1 FROM teams
+            WHERE teams.id = account_team.team_id
+            AND teams.admin_account_id = account_team.account_id
+        ) AND ist_admin = 0
     """)
 
     conn.commit()
@@ -133,17 +182,17 @@ def _code(n=6):
 
 # ══ Team ═══════════════════════════════════════════════════════════
 
-def team_erstellen(name, team_passwort):
+def team_erstellen(name, team_passwort, account_id=None):
     conn = verbindung()
     tid  = str(uuid.uuid4())[:8]
     code = _code(6)
     pw_hash = generate_password_hash(team_passwort)
     conn.execute(
-        "INSERT INTO teams (id, name, code, team_passwort_hash) VALUES (?, ?, ?, ?)",
-        (tid, name, code, pw_hash)
+        "INSERT INTO teams (id, name, code, team_passwort_hash, admin_account_id) VALUES (?, ?, ?, ?, ?)",
+        (tid, name, code, pw_hash, account_id)
     )
     conn.commit()
-    team = dict(conn.execute("SELECT id,name,code FROM teams WHERE id=?", (tid,)).fetchone())
+    team = dict(conn.execute("SELECT id,name,code,admin_account_id FROM teams WHERE id=?", (tid,)).fetchone())
     conn.close()
     return team
 
@@ -161,7 +210,7 @@ def team_passwort_pruefen(team, passwort):
 
 def team_per_id(tid):
     conn = verbindung()
-    row  = conn.execute("SELECT id,name,code FROM teams WHERE id=?", (tid,)).fetchone()
+    row  = conn.execute("SELECT id,name,code,admin_account_id FROM teams WHERE id=?", (tid,)).fetchone()
     conn.close()
     return dict(row) if row else None
 
@@ -208,7 +257,7 @@ def account_per_id(account_id):
 def account_teams(account_id):
     conn = verbindung()
     rows = conn.execute(
-        """SELECT t.id, t.name, t.code, at.spieler_id
+        """SELECT t.id, t.name, t.code, t.admin_account_id, at.spieler_id, at.ist_admin
            FROM account_team at
            JOIN teams t ON t.id = at.team_id
            WHERE at.account_id=?""",
@@ -234,11 +283,11 @@ def account_stats_aktualisieren(account_id):
     return dict(row) if row else {'punkte': 0, 'spiele': 0, 'siege': 0}
 
 
-def account_team_verknuepfen(account_id, team_id, spieler_id):
+def account_team_verknuepfen(account_id, team_id, spieler_id, ist_admin=0):
     conn = verbindung()
     conn.execute(
-        "INSERT OR REPLACE INTO account_team (account_id, team_id, spieler_id) VALUES (?,?,?)",
-        (account_id, team_id, spieler_id)
+        "INSERT OR REPLACE INTO account_team (account_id, team_id, spieler_id, ist_admin) VALUES (?,?,?,?)",
+        (account_id, team_id, spieler_id, ist_admin)
     )
     conn.commit()
     conn.close()
@@ -917,3 +966,151 @@ def spieltag_runde_generieren(spieltag_id):
     conn.commit()
     conn.close()
 
+
+# ══ Admin & Plus ═══════════════════════════════════════════════════
+
+def account_ist_admin(account_id, team_id):
+    conn = verbindung()
+    row = conn.execute(
+        "SELECT admin_account_id FROM teams WHERE id=?",
+        (team_id,)
+    ).fetchone()
+    conn.close()
+    if not row:
+        return False
+    return row['admin_account_id'] == account_id
+
+
+def team_ist_plus(team_id):
+    conn = verbindung()
+    row = conn.execute(
+        "SELECT ist_plus, admin_account_id FROM teams WHERE id=?",
+        (team_id,)
+    ).fetchone()
+    if not row:
+        conn.close()
+        return False
+    if row['ist_plus']:
+        conn.close()
+        return True
+    if row['admin_account_id']:
+        verein = conn.execute(
+            "SELECT hat_vereinsabo, vereinsabo_bis FROM accounts WHERE id=?",
+            (row['admin_account_id'],)
+        ).fetchone()
+        conn.close()
+        if verein and verein['hat_vereinsabo']:
+            bis = verein['vereinsabo_bis']
+            if bis is None or bis > datetime.utcnow().strftime('%Y-%m-%d'):
+                return True
+        return False
+    conn.close()
+    return False
+
+
+def team_admin_aendern(team_id, neuer_admin_account_id):
+    conn = verbindung()
+    mitglied = conn.execute(
+        "SELECT account_id FROM account_team WHERE account_id=? AND team_id=?",
+        (neuer_admin_account_id, team_id)
+    ).fetchone()
+    if not mitglied:
+        conn.close()
+        return False, "Neuer Admin muss bereits Mitglied sein"
+    conn.execute("UPDATE account_team SET ist_admin=0 WHERE team_id=?", (team_id,))
+    conn.execute(
+        "UPDATE account_team SET ist_admin=1 WHERE account_id=? AND team_id=?",
+        (neuer_admin_account_id, team_id)
+    )
+    conn.execute(
+        "UPDATE teams SET admin_account_id=? WHERE id=?",
+        (neuer_admin_account_id, team_id)
+    )
+    conn.commit()
+    conn.close()
+    return True, None
+
+
+def team_mitglieder_accounts(team_id):
+    conn = verbindung()
+    rows = conn.execute(
+        """SELECT a.id, a.alias, at.ist_admin
+           FROM account_team at
+           JOIN accounts a ON a.id = at.account_id
+           WHERE at.team_id=?
+           ORDER BY at.ist_admin DESC, a.alias ASC""",
+        (team_id,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def admin_statistiken():
+    conn = verbindung()
+
+    gesamt_accounts  = conn.execute("SELECT COUNT(*) FROM accounts").fetchone()[0]
+    gesamt_teams     = conn.execute("SELECT COUNT(*) FROM teams").fetchone()[0]
+    plus_teams       = conn.execute("SELECT COUNT(*) FROM teams WHERE ist_plus=1").fetchone()[0]
+    verein_accounts  = conn.execute("SELECT COUNT(*) FROM accounts WHERE hat_vereinsabo=1").fetchone()[0]
+    aktive_spieltage = conn.execute("SELECT COUNT(*) FROM spieltage WHERE status='aktiv'").fetchone()[0]
+    gesamt_matches   = conn.execute("SELECT COUNT(*) FROM matches WHERE status='gespielt'").fetchone()[0]
+
+    neue_accounts_woche = conn.execute("""
+        SELECT COUNT(*) FROM accounts
+        WHERE erstellt_am >= datetime('now', '-7 days')
+    """).fetchone()[0]
+
+    neue_teams_woche = conn.execute("""
+        SELECT COUNT(*) FROM teams
+        WHERE erstellt_am >= datetime('now', '-7 days')
+    """).fetchone()[0]
+
+    mitglieder_verteilung = conn.execute("""
+        SELECT mitglieder_anzahl, COUNT(*) as anzahl_teams
+        FROM (
+            SELECT team_id, COUNT(account_id) as mitglieder_anzahl
+            FROM account_team
+            GROUP BY team_id
+        )
+        GROUP BY mitglieder_anzahl
+        ORDER BY mitglieder_anzahl DESC
+    """).fetchall()
+
+    registrierungen_verlauf = conn.execute("""
+        SELECT DATE(erstellt_am) as datum, COUNT(*) as anzahl
+        FROM accounts
+        WHERE erstellt_am >= datetime('now', '-30 days')
+        GROUP BY DATE(erstellt_am)
+        ORDER BY datum ASC
+    """).fetchall()
+
+    teams_verlauf = conn.execute("""
+        SELECT DATE(erstellt_am) as datum, COUNT(*) as anzahl
+        FROM teams
+        WHERE erstellt_am >= datetime('now', '-30 days')
+        GROUP BY DATE(erstellt_am)
+        ORDER BY datum ASC
+    """).fetchall()
+
+    conn.close()
+
+    return {
+        "gesamt": {
+            "accounts": gesamt_accounts,
+            "teams": gesamt_teams,
+            "plus_teams": plus_teams,
+            "free_teams": gesamt_teams - plus_teams,
+            "verein_accounts": verein_accounts,
+            "aktive_spieltage": aktive_spieltage,
+            "gesamt_matches": gesamt_matches,
+        },
+        "diese_woche": {
+            "neue_accounts": neue_accounts_woche,
+            "neue_teams": neue_teams_woche,
+        },
+        "verlauf": {
+            "registrierungen": [dict(r) for r in registrierungen_verlauf],
+            "teams": [dict(r) for r in teams_verlauf],
+        },
+        "mitglieder_verteilung": [dict(r) for r in mitglieder_verteilung],
+    }

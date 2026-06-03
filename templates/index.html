@@ -408,6 +408,15 @@
         </div>
         <div id="spieler-liste"><div class="leer">Noch keine Spieler.</div></div>
       </div>
+
+      <!-- Admin-Verwaltung (nur für Team-Admin) -->
+      <div id="admin-verwaltung" class="karte" style="display:none">
+        <div class="karte-titel">Team-Verwaltung</div>
+        <p class="hinweis">Als Admin kannst du die Admin-Rolle an ein anderes Mitglied übertragen.</p>
+        <div class="sec-titel" style="margin-bottom:8px">Admin-Rolle übertragen an:</div>
+        <div id="admin-mitglieder-liste"><div class="leer">Lade Mitglieder…</div></div>
+        <div id="m-admin" class="meldung"></div>
+      </div>
     </div>
 
     <!-- SPIELTAG ──────────────────────────────────────────────── -->
@@ -526,7 +535,7 @@
 <!-- ════════════════════════════════════════════════════════════ -->
 <script>
 
-let Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random' }
+let Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random', ist_admin:false }
 
 // ── Hilfs ────────────────────────────────────────────────────────
 function toast(t) {
@@ -672,7 +681,7 @@ async function ladeProfil() {
         <div class="sp-links">
           <div class="avatar">${t.name[0].toUpperCase()}</div>
           <div>
-            <div class="sp-name">${t.name}</div>
+            <div class="sp-name">${t.ist_admin ? '👑 ' : ''}${t.name}</div>
             <div class="sp-sub">Code: ${t.code}</div>
           </div>
         </div>
@@ -759,6 +768,7 @@ async function profilGastUebernehmen() {
 function appStarten(team, sid) {
   Z.team       = team
   Z.spieler_id = sid
+  Z.ist_admin  = !!(Z.account && team && Z.account.id === team.admin_account_id)
 
   document.getElementById('h-teamname').textContent = team.name
   document.getElementById('h-code').textContent     = team.code
@@ -772,7 +782,7 @@ function appStarten(team, sid) {
 
 async function abmelden() {
   await fetch('/api/abmelden', { method: 'POST' })
-  Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random' }
+  Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random', ist_admin:false }
   document.getElementById('s-app').classList.remove('aktiv')
   document.getElementById('s-profil').classList.remove('aktiv')
   document.getElementById('s-login').classList.add('aktiv')
@@ -791,7 +801,7 @@ function zeigeSeite(name) {
   const idx = {home:0, spieler:1, spieltag:2, ranking:3}[name]
   if (idx !== undefined) document.querySelectorAll('.nav-item')[idx].classList.add('aktiv')
   if (name === 'home')     renderHome()
-  if (name === 'spieler')  renderSpielerSeite()
+  if (name === 'spieler')  { renderSpielerSeite(); ladeAdminMitglieder() }
   if (name === 'spieltag') ladeSpieltag()
   if (name === 'ranking')  ladeRanking()
 }
@@ -825,8 +835,47 @@ async function spielerAdd() {
 }
 
 async function spielerDel(id) {
-  await fetch('/api/spieler/' + id, { method: 'DELETE' })
+  const res = await fetch('/api/spieler/' + id, { method: 'DELETE' })
+  if (!res.ok) {
+    const d = await res.json()
+    toast(d.fehler || 'Fehler beim Entfernen.')
+    return
+  }
   await ladeSpieler()
+  renderSpielerSeite()
+}
+
+async function ladeAdminMitglieder() {
+  if (!Z.ist_admin) return
+  const res = await fetch('/api/team/mitglieder')
+  const mitglieder = await res.json()
+  const liste = document.getElementById('admin-mitglieder-liste')
+  const andere = mitglieder.filter(m => m.id !== Z.account?.id)
+  if (!andere.length) {
+    liste.innerHTML = '<div class="leer">Keine weiteren Mitglieder.</div>'
+    return
+  }
+  liste.innerHTML = andere.map(m => `
+    <div class="spieler-item">
+      <div class="sp-links">
+        <div class="avatar">${(m.alias||'?')[0].toUpperCase()}</div>
+        <div class="sp-name">${m.alias}</div>
+      </div>
+      <button class="btn-ghost" style="color:var(--g);border-color:rgba(0,102,179,.4)"
+        onclick="adminUebertragen('${m.id}','${m.alias}')">
+        Admin übertragen
+      </button>
+    </div>
+  `).join('')
+}
+
+async function adminUebertragen(neuerId, neuerAlias) {
+  if (!confirm(`Wirklich? Du verlierst damit deine Admin-Rechte!\n\nAdmin-Rolle an "${neuerAlias}" übertragen?`)) return
+  const [res, d] = await post(`/api/team/${Z.team.id}/admin/uebertragen`, { neuer_admin_account_id: neuerId })
+  if (!res.ok) { meldung('m-admin', d.fehler, 'fehler'); return }
+  meldung('m-admin', `Admin-Rolle an ${neuerAlias} übertragen.`, 'erfolg')
+  Z.ist_admin = false
+  if (Z.team) Z.team.admin_account_id = neuerId
   renderSpielerSeite()
 }
 
@@ -858,10 +907,13 @@ function renderSpielerSeite() {
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0">
         ${s.ist_gast ? `<button class="btn-ghost" style="color:var(--gast);border-color:rgba(255,152,0,.3)" onclick="claimCodeAnzeigen('${s.id}')">Code</button>` : ''}
-        <button class="btn-ghost" onclick="if(confirm('${s.alias} wirklich entfernen und den Fortschritt Löschen?')) spielerDel('${s.id}')">✕</button>
+        ${Z.ist_admin ? `<button class="btn-ghost" onclick="if(confirm('${s.alias} wirklich entfernen und den Fortschritt Löschen?')) spielerDel('${s.id}')">✕</button>` : ''}
       </div>
     </div>
   `).join('')
+
+  const adminBereich = document.getElementById('admin-verwaltung')
+  if (adminBereich) adminBereich.style.display = Z.ist_admin ? 'block' : 'none'
 }
 
 // ── Modus ────────────────────────────────────────────────────────

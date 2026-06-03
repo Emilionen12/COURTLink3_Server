@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Court Link Admin Dashboard</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0a0f1e;color:#F0F0F0;font-family:'Segoe UI',sans-serif;padding:20px}
+    h1{font-size:22px;color:#0066B3;letter-spacing:1px}
+    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:14px;border-bottom:1px solid #272727}
+    .header-sub{font-size:11px;color:#777;letter-spacing:2px;margin-top:2px}
+    .logout-btn{background:transparent;color:#777;border:1px solid #272727;border-radius:8px;font-size:12px;padding:6px 14px;cursor:pointer;transition:.15s}
+    .logout-btn:hover{color:#FF4444;border-color:#FF4444}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+    .stat-card{background:#141414;border:1px solid #2a2a3a;border-radius:12px;padding:16px;text-align:center}
+    .stat-zahl{font-size:36px;font-weight:700;color:#0066B3;line-height:1}
+    .stat-label{font-size:11px;color:#777;margin-top:6px;letter-spacing:.5px;text-transform:uppercase}
+    .section{background:#141414;border:1px solid #2a2a3a;border-radius:12px;padding:16px;margin-bottom:16px}
+    .section-title{font-size:11px;font-weight:700;color:#777;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px}
+    .verlauf-zeile{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #1a1a1a;font-size:12px}
+    .verlauf-zeile:last-child{border-bottom:none}
+    .verlauf-datum{color:#777}
+    .verlauf-anzahl{font-size:14px;font-weight:700;color:#0066B3}
+    .bar{display:inline-block;height:8px;background:#0066B3;border-radius:4px;min-width:4px;transition:.3s}
+    .verteilung-zeile{display:flex;align-items:center;gap:12px;padding:6px 0;font-size:13px}
+    .verteilung-label{color:#777;min-width:120px}
+    .refresh-info{font-size:10px;color:#555;text-align:right;margin-top:8px}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+    @media(max-width:600px){.grid-2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Court Link Admin</h1>
+    <div class="header-sub">ANONYMISIERTES DASHBOARD · KEINE PERSONENDATEN</div>
+  </div>
+  <form method="POST" action="/{{ admin_path }}/logout">
+    <button type="submit" class="logout-btn">Abmelden</button>
+  </form>
+</div>
+
+<!-- Zeile 1: Gesamt-Statistiken -->
+<div class="section-title" style="margin-bottom:8px">Gesamt</div>
+<div class="grid" id="stats-gesamt">
+  <div class="stat-card"><div class="stat-zahl" id="s-accounts">—</div><div class="stat-label">Accounts</div></div>
+  <div class="stat-card"><div class="stat-zahl" id="s-teams">—</div><div class="stat-label">Teams</div></div>
+  <div class="stat-card"><div class="stat-zahl" id="s-plus">—</div><div class="stat-label">Plus Teams</div></div>
+  <div class="stat-card"><div class="stat-zahl" id="s-free">—</div><div class="stat-label">Free Teams</div></div>
+  <div class="stat-card"><div class="stat-zahl" id="s-verein">—</div><div class="stat-label">Verein-Abos</div></div>
+</div>
+
+<!-- Zeile 2: Diese Woche -->
+<div class="section-title" style="margin-bottom:8px">Diese Woche</div>
+<div class="grid" style="margin-bottom:20px">
+  <div class="stat-card"><div class="stat-zahl" id="s-neue-accounts">—</div><div class="stat-label">Neue Accounts</div></div>
+  <div class="stat-card"><div class="stat-zahl" id="s-neue-teams">—</div><div class="stat-label">Neue Teams</div></div>
+  <div class="stat-card"><div class="stat-zahl" id="s-aktive-st">—</div><div class="stat-label">Aktive Turniere</div></div>
+  <div class="stat-card"><div class="stat-zahl" id="s-matches">—</div><div class="stat-label">Gesamt Matches</div></div>
+</div>
+
+<!-- Zeile 3: Verlauf -->
+<div class="grid-2">
+  <div class="section">
+    <div class="section-title">Registrierungen — letzte 30 Tage</div>
+    <div id="verlauf-accounts"><div style="color:#555;font-size:12px">Keine Daten.</div></div>
+  </div>
+  <div class="section">
+    <div class="section-title">Teams erstellt — letzte 30 Tage</div>
+    <div id="verlauf-teams"><div style="color:#555;font-size:12px">Keine Daten.</div></div>
+  </div>
+</div>
+
+<!-- Zeile 4: Mitglieder-Verteilung -->
+<div class="section">
+  <div class="section-title">Mitglieder-Verteilung pro Team</div>
+  <div id="mitglieder-verteilung"><div style="color:#555;font-size:12px">Keine Daten.</div></div>
+</div>
+
+<div class="refresh-info" id="refresh-info">Aktualisiert gerade…</div>
+
+<script>
+async function ladeStats() {
+  try {
+    const res = await fetch('/api/admin/stats')
+    if (!res.ok) { document.body.innerHTML = '<p style="color:red;padding:40px">Kein Zugriff.</p>'; return }
+    const d = await res.json()
+
+    // Gesamt
+    document.getElementById('s-accounts').textContent = d.gesamt.accounts
+    document.getElementById('s-teams').textContent    = d.gesamt.teams
+    document.getElementById('s-plus').textContent     = d.gesamt.plus_teams
+    document.getElementById('s-free').textContent     = d.gesamt.free_teams
+    document.getElementById('s-verein').textContent   = d.gesamt.verein_accounts
+
+    // Diese Woche
+    document.getElementById('s-neue-accounts').textContent = d.diese_woche.neue_accounts
+    document.getElementById('s-neue-teams').textContent    = d.diese_woche.neue_teams
+    document.getElementById('s-aktive-st').textContent     = d.gesamt.aktive_spieltage
+    document.getElementById('s-matches').textContent       = d.gesamt.gesamt_matches
+
+    // Verlauf Registrierungen
+    const vaEl = document.getElementById('verlauf-accounts')
+    if (d.verlauf.registrierungen.length) {
+      const max = Math.max(...d.verlauf.registrierungen.map(r => r.anzahl), 1)
+      vaEl.innerHTML = d.verlauf.registrierungen.map(r => `
+        <div class="verlauf-zeile">
+          <span class="verlauf-datum">${r.datum}</span>
+          <span class="bar" style="width:${Math.round(r.anzahl/max*80)}px"></span>
+          <span class="verlauf-anzahl">${r.anzahl}</span>
+        </div>`).join('')
+    } else {
+      vaEl.innerHTML = '<div style="color:#555;font-size:12px">Keine Daten.</div>'
+    }
+
+    // Verlauf Teams
+    const vtEl = document.getElementById('verlauf-teams')
+    if (d.verlauf.teams.length) {
+      const max = Math.max(...d.verlauf.teams.map(r => r.anzahl), 1)
+      vtEl.innerHTML = d.verlauf.teams.map(r => `
+        <div class="verlauf-zeile">
+          <span class="verlauf-datum">${r.datum}</span>
+          <span class="bar" style="width:${Math.round(r.anzahl/max*80)}px"></span>
+          <span class="verlauf-anzahl">${r.anzahl}</span>
+        </div>`).join('')
+    } else {
+      vtEl.innerHTML = '<div style="color:#555;font-size:12px">Keine Daten.</div>'
+    }
+
+    // Mitglieder-Verteilung
+    const mvEl = document.getElementById('mitglieder-verteilung')
+    if (d.mitglieder_verteilung.length) {
+      mvEl.innerHTML = d.mitglieder_verteilung.map(r => `
+        <div class="verteilung-zeile">
+          <span class="verteilung-label">${r.anzahl_teams} Team${r.anzahl_teams !== 1 ? 's' : ''}</span>
+          <span style="color:#F0F0F0">→ ${r.mitglieder_anzahl} Mitglied${r.mitglieder_anzahl !== 1 ? 'er' : ''}</span>
+        </div>`).join('')
+    } else {
+      mvEl.innerHTML = '<div style="color:#555;font-size:12px">Keine Daten.</div>'
+    }
+
+    document.getElementById('refresh-info').textContent =
+      'Zuletzt aktualisiert: ' + new Date().toLocaleTimeString('de-DE') + ' · Nächste Aktualisierung in 60s'
+
+  } catch(e) {
+    document.getElementById('refresh-info').textContent = 'Fehler beim Laden.'
+  }
+  setTimeout(ladeStats, 60000)
+}
+
+ladeStats()
+</script>
+</body>
+</html>
