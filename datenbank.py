@@ -1050,8 +1050,21 @@ def admin_statistiken():
 
     gesamt_accounts  = conn.execute("SELECT COUNT(*) FROM accounts").fetchone()[0]
     gesamt_teams     = conn.execute("SELECT COUNT(*) FROM teams").fetchone()[0]
-    plus_teams       = conn.execute("SELECT COUNT(*) FROM teams WHERE ist_plus=1").fetchone()[0]
-    verein_accounts  = conn.execute("SELECT COUNT(*) FROM accounts WHERE hat_vereinsabo=1").fetchone()[0]
+    plus_teams       = conn.execute("""
+        SELECT COUNT(*) FROM teams t
+        WHERE t.ist_plus = 1
+        OR EXISTS (
+            SELECT 1 FROM accounts a
+            WHERE a.id = t.admin_account_id
+            AND a.hat_vereinsabo = 1
+            AND (a.vereinsabo_bis IS NULL OR a.vereinsabo_bis > date('now'))
+        )
+    """).fetchone()[0]
+    verein_accounts  = conn.execute("""
+        SELECT COUNT(*) FROM accounts
+        WHERE hat_vereinsabo = 1
+        AND (vereinsabo_bis IS NULL OR vereinsabo_bis > date('now'))
+    """).fetchone()[0]
     aktive_spieltage = conn.execute("SELECT COUNT(*) FROM spieltage WHERE status='aktiv'").fetchone()[0]
     gesamt_matches   = conn.execute("SELECT COUNT(*) FROM matches WHERE status='gespielt'").fetchone()[0]
 
@@ -1068,9 +1081,10 @@ def admin_statistiken():
     mitglieder_verteilung = conn.execute("""
         SELECT mitglieder_anzahl, COUNT(*) as anzahl_teams
         FROM (
-            SELECT team_id, COUNT(account_id) as mitglieder_anzahl
-            FROM account_team
-            GROUP BY team_id
+            SELECT t.id, COUNT(at.account_id) as mitglieder_anzahl
+            FROM teams t
+            LEFT JOIN account_team at ON at.team_id = t.id
+            GROUP BY t.id
         )
         GROUP BY mitglieder_anzahl
         ORDER BY mitglieder_anzahl DESC
