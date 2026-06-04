@@ -132,11 +132,13 @@ async function ladeStats() {
     // Mitglieder-Verteilung
     const mvEl = document.getElementById('mitglieder-verteilung')
     if (d.mitglieder_verteilung.length) {
-      mvEl.innerHTML = d.mitglieder_verteilung.map(r => `
+      mvEl.innerHTML = d.mitglieder_verteilung.map(r => {
+        const gaesteTeil = r.gaeste_anzahl > 0 ? `, ${r.gaeste_anzahl} Gast${r.gaeste_anzahl !== 1 ? 'gäste' : ''}` : ''
+        return `
         <div class="verteilung-zeile">
           <span class="verteilung-label">${r.anzahl_teams} Team${r.anzahl_teams !== 1 ? 's' : ''}</span>
-          <span style="color:#F0F0F0">→ ${r.mitglieder_anzahl} Mitglied${r.mitglieder_anzahl !== 1 ? 'er' : ''}</span>
-        </div>`).join('')
+          <span style="color:#F0F0F0">→ ${r.spieler_anzahl} Spieler${gaesteTeil}</span>
+        </div>`}).join('')
     } else {
       mvEl.innerHTML = '<div style="color:#555;font-size:12px">Keine Daten.</div>'
     }

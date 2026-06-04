@@ -1079,15 +1079,17 @@ def admin_statistiken():
     """).fetchone()[0]
 
     mitglieder_verteilung = conn.execute("""
-        SELECT mitglieder_anzahl, COUNT(*) as anzahl_teams
+        SELECT spieler_anzahl, gaeste_anzahl, COUNT(*) as anzahl_teams
         FROM (
-            SELECT t.id, COUNT(at.account_id) as mitglieder_anzahl
+            SELECT t.id,
+                COUNT(CASE WHEN s.ist_gast = 0 THEN 1 END) as spieler_anzahl,
+                COUNT(CASE WHEN s.ist_gast = 1 THEN 1 END) as gaeste_anzahl
             FROM teams t
-            LEFT JOIN account_team at ON at.team_id = t.id
+            LEFT JOIN spieler s ON s.team_id = t.id
             GROUP BY t.id
         )
-        GROUP BY mitglieder_anzahl
-        ORDER BY mitglieder_anzahl DESC
+        GROUP BY spieler_anzahl, gaeste_anzahl
+        ORDER BY spieler_anzahl + gaeste_anzahl DESC, spieler_anzahl DESC
     """).fetchall()
 
     registrierungen_verlauf = conn.execute("""
