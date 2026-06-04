@@ -23,8 +23,8 @@ from datenbank import (
     admin_statistiken, team_ist_plus,
 )
 
-ADMIN_MASTER_PASSWORT = os.environ.get("ADMIN_PASSWORD", "courtlink_admin_2026")
-ADMIN_PATH = os.environ.get("ADMIN_PATH", "admin_courtlink_2026")
+ADMIN_MASTER_PASSWORT = "7886_Som2025!"
+ADMIN_PATH = "LoLl"
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(16))
