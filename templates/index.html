@@ -149,6 +149,12 @@
     .info-box strong{color:var(--g)}
     .toast{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);background:var(--g);color:#fff;padding:8px 20px;border-radius:20px;font-size:13px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:999;white-space:nowrap}
     .toast.show{opacity:1}
+    .toggle-switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0}
+    .toggle-switch input{opacity:0;width:0;height:0}
+    .toggle-slider{position:absolute;cursor:pointer;inset:0;background:#2a2a3a;border-radius:24px;transition:.2s}
+    .toggle-slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+    input:checked+.toggle-slider{background:var(--g)}
+    input:checked+.toggle-slider:before{transform:translateX(20px)}
 
     /* ── Profil Aktions-Buttons ──────────────────────────────────── */
     .pf-aktion-btn{flex:1;background:var(--k2);border:1px solid var(--r);border-radius:12px;padding:12px 6px;cursor:pointer;text-align:center;transition:.2s;display:flex;flex-direction:column;align-items:center;gap:5px}
@@ -382,6 +388,12 @@
         <div id="h-spieltag"><div class="leer">Kein aktives Turnier</div></div>
         <button class="btn-outline" onclick="zeigeSeite('spieltag')" style="margin-top:10px">Turnier starten →</button>
       </div>
+      <div class="karte" id="admin-einstellungen-btn" style="display:none;cursor:pointer" onclick="zeigeSeite('einstellungen')">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="karte-titel" style="margin:0">Einstellungen</div>
+          <span style="color:var(--tg);font-size:20px">⚙️</span>
+        </div>
+      </div>
       <div class="karte">
         <div class="karte-titel">Court Link Beta</div>
         <p class="hinweis">Court Link ist noch in der Entwicklung und befindet sich gerade in einer Testlaufzeit. Es können Fehler auftreten und Funktionen können fehlerhaft sein oder sich ändern.</p>
@@ -425,15 +437,13 @@
       <!-- Turnier starten -->
       <div id="st-start" class="karte">
         <div class="karte-titel">Neues Turnier</div>
-        <div class="info-box">
-          <strong>🎲 Zufällig / ⚖️ Ranked:</strong> Round-Robin – alle Paarungen werden vorab festgelegt, jedes Team spielt einmal gegen jedes andere.<br><br>
-          <strong>🏆 Americano:</strong> Paarungen entstehen runde für runde nach Ergebnis – Gewinner spielen gegen Gewinner, Verlierer gegen Verlierer. Benötigt 4, 8 oder 12 Spieler.
+        <div id="st-americano-info" class="info-box" style="display:none">
+          🏆 <strong>Americano aktiv</strong> — Paarungen entstehen dynamisch nach Ergebnis. Bitte genau 4, 8 oder 12 Spieler wählen.
         </div>
-        <div class="sec-titel" style="margin-bottom:8px">Modus</div>
+        <div class="sec-titel" style="margin-bottom:8px">Paarungsart Runde 1</div>
         <div class="modus-gruppe">
           <div class="modus-btn aktiv" id="mb-random" onclick="modusWaehlen('random')">🎲 Zufällig</div>
           <div class="modus-btn" id="mb-ranked" onclick="modusWaehlen('ranked')">⚖️ Ranked<br><span style="font-size:10px;opacity:.7">Stark + Schwach</span></div>
-          <div class="modus-btn" id="mb-americano" onclick="modusWaehlen('americano')">🏆 Americano<br><span style="font-size:10px;opacity:.7">Gewinner vs Gewinner</span></div>
         </div>
         <div class="sec" style="margin-top:4px">
           <span class="sec-titel">Spieler auswählen</span>
@@ -487,12 +497,45 @@
       </div>
     </div>
 
+    <!-- EINSTELLUNGEN ─────────────────────────────────────────── -->
+    <div id="p-einstellungen" class="page">
+      <div class="karte">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <button class="btn-ghost" onclick="zeigeSeite('home')" style="flex-shrink:0;padding:6px 12px">← Zurück</button>
+          <div class="karte-titel" style="margin:0">Einstellungen</div>
+        </div>
+
+        <div class="sec-titel" style="margin-bottom:10px">Americano-Modus</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-size:14px;color:var(--t)">Americano aktiviert</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="americano-toggle" onchange="speichereAmericano(this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <p class="hinweis">Gewinner-Teams spielen ab Runde 2 gegen Gewinner-Teams, Verlierer gegen Verlierer. Benötigt 4, 8 oder 12 Spieler pro Turnier.</p>
+        <div id="m-americano" class="meldung" style="margin-top:6px"></div>
+      </div>
+
+      <div class="karte" id="einst-admin-karte" style="display:none">
+        <div class="karte-titel">Admin-Rolle übertragen</div>
+        <p class="hinweis">Wähle ein Teammitglied dem du die Admin-Rechte übergibst. Du verlierst damit deine eigenen Admin-Rechte.</p>
+        <div id="einst-mitglieder-liste"><div class="leer">Lade Mitglieder…</div></div>
+        <div id="m-einst-admin" class="meldung" style="margin-top:8px"></div>
+      </div>
+    </div>
+
     <!-- RANKING ───────────────────────────────────────────────── -->
     <div id="p-ranking" class="page">
       <div class="karte">
         <div class="karte-titel">Ranking</div>
-        <div style="font-size:11px;color:var(--tg);margin-bottom:12px">Sieg +3 · Unentschieden +1 · Niederlage +0</div>
+        <div class="login-tabs" style="margin-bottom:12px">
+          <div class="login-tab aktiv" onclick="wechsleRankingTab('punkte',this)">Punkte</div>
+          <div class="login-tab" onclick="wechsleRankingTab('siegquote',this)">Siegquote</div>
+        </div>
+        <div id="ranking-hint" style="font-size:11px;color:var(--tg);margin-bottom:12px">Sieg +3 · Unentschieden +1 · Niederlage +0</div>
         <div id="ranking-liste"><div class="leer">Noch keine Spiele.</div></div>
+        <div id="ranking-siegquote-liste" style="display:none"><div class="leer">Noch keine Spiele.</div></div>
       </div>
     </div>
 
@@ -535,7 +578,7 @@
 <!-- ════════════════════════════════════════════════════════════ -->
 <script>
 
-let Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random', ist_admin:false }
+let Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random', ist_admin:false, americano_modus:true }
 
 // ── Hilfs ────────────────────────────────────────────────────────
 function toast(t) {
@@ -766,9 +809,10 @@ async function profilGastUebernehmen() {
 
 // ── App starten ──────────────────────────────────────────────────
 function appStarten(team, sid) {
-  Z.team       = team
-  Z.spieler_id = sid
-  Z.ist_admin  = !!(Z.account && team && Z.account.id === team.admin_account_id)
+  Z.team          = team
+  Z.spieler_id    = sid
+  Z.ist_admin     = !!(Z.account && team && Z.account.id === team.admin_account_id)
+  Z.americano_modus = !!(team && team.americano_modus)
 
   document.getElementById('h-teamname').textContent = team.name
   document.getElementById('h-code').textContent     = team.code
@@ -782,7 +826,7 @@ function appStarten(team, sid) {
 
 async function abmelden() {
   await fetch('/api/abmelden', { method: 'POST' })
-  Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random', ist_admin:false }
+  Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random', ist_admin:false, americano_modus:true }
   document.getElementById('s-app').classList.remove('aktiv')
   document.getElementById('s-profil').classList.remove('aktiv')
   document.getElementById('s-login').classList.add('aktiv')
@@ -800,10 +844,11 @@ function zeigeSeite(name) {
   document.getElementById('p-' + name).classList.add('aktiv')
   const idx = {home:0, spieler:1, spieltag:2, ranking:3}[name]
   if (idx !== undefined) document.querySelectorAll('.nav-item')[idx].classList.add('aktiv')
-  if (name === 'home')     renderHome()
-  if (name === 'spieler')  { renderSpielerSeite(); ladeAdminMitglieder() }
-  if (name === 'spieltag') ladeSpieltag()
-  if (name === 'ranking')  ladeRanking()
+  if (name === 'home')          renderHome()
+  if (name === 'spieler')       { renderSpielerSeite(); ladeAdminMitglieder() }
+  if (name === 'spieltag')      ladeSpieltag()
+  if (name === 'ranking')       ladeRanking()
+  if (name === 'einstellungen') ladeEinstellungen()
 }
 
 // ── Daten laden ──────────────────────────────────────────────────
@@ -872,11 +917,63 @@ async function ladeAdminMitglieder() {
 async function adminUebertragen(neuerId, neuerAlias) {
   if (!confirm(`Wirklich? Du verlierst damit deine Admin-Rechte!\n\nAdmin-Rolle an "${neuerAlias}" übertragen?`)) return
   const [res, d] = await post(`/api/team/${Z.team.id}/admin/uebertragen`, { neuer_admin_account_id: neuerId })
-  if (!res.ok) { meldung('m-admin', d.fehler, 'fehler'); return }
-  meldung('m-admin', `Admin-Rolle an ${neuerAlias} übertragen.`, 'erfolg')
+  if (!res.ok) { toast(d.fehler || 'Fehler beim Übertragen.'); return }
+  toast(`Admin-Rolle an ${neuerAlias} übertragen.`)
   Z.ist_admin = false
   if (Z.team) Z.team.admin_account_id = neuerId
   renderSpielerSeite()
+  zeigeSeite('home')
+}
+
+// ── Einstellungen ─────────────────────────────────────────────────
+async function ladeEinstellungen() {
+  if (!Z.team) return
+  const res = await fetch(`/api/team/${Z.team.id}/einstellungen`)
+  const d   = await res.json()
+
+  Z.americano_modus = d.americano_modus === 1
+  document.getElementById('americano-toggle').checked = Z.americano_modus
+
+  const adminKarte = document.getElementById('einst-admin-karte')
+  if (Z.ist_admin) {
+    adminKarte.style.display = 'block'
+    ladeAdminMitgliederFuerEinstellungen()
+  } else {
+    adminKarte.style.display = 'none'
+  }
+}
+
+async function ladeAdminMitgliederFuerEinstellungen() {
+  const res = await fetch('/api/team/mitglieder')
+  const mitglieder = await res.json()
+  const liste = document.getElementById('einst-mitglieder-liste')
+  const andere = mitglieder.filter(m => m.id !== Z.account?.id)
+  if (!andere.length) {
+    liste.innerHTML = '<div class="leer">Keine weiteren Mitglieder.</div>'
+    return
+  }
+  liste.innerHTML = andere.map(m => `
+    <div class="spieler-item">
+      <div class="sp-links">
+        <div class="avatar">${(m.alias||'?')[0].toUpperCase()}</div>
+        <div class="sp-name">${m.alias}</div>
+      </div>
+      <button class="btn-ghost" style="color:var(--g);border-color:rgba(0,102,179,.4)"
+        onclick="adminUebertragen('${m.id}','${m.alias}')">
+        Übertragen
+      </button>
+    </div>`).join('')
+}
+
+async function speichereAmericano(wert) {
+  const [res, d] = await post(`/api/team/${Z.team.id}/americano`, { wert: wert ? 1 : 0 })
+  if (!res.ok) {
+    meldung('m-americano', d.fehler || 'Fehler', 'fehler')
+    document.getElementById('americano-toggle').checked = !wert
+    return
+  }
+  Z.americano_modus = wert
+  meldung('m-americano', wert ? 'Americano-Modus aktiviert.' : 'Americano-Modus deaktiviert.', 'erfolg')
 }
 
 async function claimCodeAnzeigen(sid) {
@@ -921,9 +1018,6 @@ function modusWaehlen(m) {
   Z.modus = m
   document.getElementById('mb-random').classList.toggle('aktiv', m === 'random')
   document.getElementById('mb-ranked').classList.toggle('aktiv', m === 'ranked')
-  document.getElementById('mb-americano').classList.toggle('aktiv', m === 'americano')
-  document.getElementById('st-hinweis').textContent =
-    m === 'americano' ? 'Genau 4, 8 oder 12 Spieler wählen.' : 'Mind. 4 Spieler (gerade Anzahl).'
 }
 
 // ── Spieltag laden ───────────────────────────────────────────────
@@ -945,6 +1039,10 @@ async function ladeSpieltag() {
 }
 
 function renderAuswahlListe() {
+  document.getElementById('st-americano-info').style.display = Z.americano_modus ? 'block' : 'none'
+  document.getElementById('st-hinweis').textContent = Z.americano_modus
+    ? 'Genau 4, 8 oder 12 Spieler wählen (Americano aktiv).'
+    : 'Mind. 4 Spieler (gerade Anzahl).'
   const liste = document.getElementById('st-liste')
   if (!Z.spieler.length) { liste.innerHTML = '<div class="leer">Erst Spieler hinzufügen.</div>'; return }
   liste.innerHTML = Z.spieler.map(s => `
@@ -977,8 +1075,8 @@ async function spieltagStarten() {
   const ids = [...document.querySelectorAll('#st-liste input:checked')].map(cb => cb.id.replace('cb-',''))
   if (ids.length < 4)      { meldung('m-st', 'Mindestens 4 Spieler auswählen.', 'fehler'); return }
   if (ids.length % 2 !== 0){ meldung('m-st', 'Gerade Anzahl nötig (4, 6, 8…).', 'fehler'); return }
-  if (Z.modus === 'americano' && ids.length % 4 !== 0) {
-    meldung('m-st', 'Americano benötigt 4, 8 oder 12 Spieler.', 'fehler'); return
+  if (Z.americano_modus && ids.length % 4 !== 0) {
+    meldung('m-st', 'Americano-Modus aktiv — bitte genau 4, 8 oder 12 Spieler wählen.', 'fehler'); return
   }
 
   const [res, d] = await post('/api/spieltag/starten', { spieler_ids: ids, modus: Z.modus })
@@ -1112,7 +1210,7 @@ async function alleErgebnisseSpeichern() {
   if (d2.aktiv) {
     Z.spieltag = d2.spieltag
     renderTurnier()
-    if (d.naechste_runde) toast('Runde abgeschlossen! Nächste Runde startet.')
+    if (d.naechste_runde) toast(`🎾 Runde ${d.runde_nr} startet!`)
     else toast(`${ergebnisse.length} Ergebnis${ergebnisse.length > 1 ? 'se' : ''} gespeichert!`)
   }
 }
@@ -1127,13 +1225,24 @@ async function spieltagBeenden() {
 }
 
 // ── Ranking ──────────────────────────────────────────────────────
+function wechsleRankingTab(tab, el) {
+  document.querySelectorAll('#p-ranking .login-tab').forEach(t => t.classList.remove('aktiv'))
+  el.classList.add('aktiv')
+  document.getElementById('ranking-hint').textContent = tab === 'punkte'
+    ? 'Sieg +3 · Unentschieden +1 · Niederlage +0'
+    : 'Siege ÷ Spiele × 100 · Bei Gleichstand entscheiden mehr Spiele'
+  document.getElementById('ranking-liste').style.display            = tab === 'punkte'    ? '' : 'none'
+  document.getElementById('ranking-siegquote-liste').style.display  = tab === 'siegquote' ? '' : 'none'
+}
+
 async function ladeRanking() {
   const res   = await fetch('/api/ranking')
   const liste = await res.json()
   const el    = document.getElementById('ranking-liste')
-  if (!liste.length) { el.innerHTML = '<div class="leer">Noch keine Spiele.</div>'; return }
+  const el2   = document.getElementById('ranking-siegquote-liste')
   const medals = ['🥇','🥈','🥉']
-  el.innerHTML = liste.map((s, i) => `
+
+  const rangItem = (s, i, wertZahl, wertLabel) => `
     <div class="rang-item">
       <div class="rang-nr" style="color:${i===0?'var(--gold)':i===1?'var(--silber)':i===2?'var(--bronze)':'var(--tg)'}">
         ${medals[i] || (i+1)}
@@ -1144,11 +1253,29 @@ async function ladeRanking() {
         <div class="sp-sub">${s.siege} Siege · ${s.spiele} Spiele</div>
       </div>
       <div class="rang-pkt">
-        <div class="rang-pkt-zahl">${s.punkte}</div>
-        <div class="rang-pkt-label">Punkte</div>
+        <div class="rang-pkt-zahl">${wertZahl}</div>
+        <div class="rang-pkt-label">${wertLabel}</div>
       </div>
-    </div>
-  `).join('')
+    </div>`
+
+  if (!liste.length) {
+    el.innerHTML  = '<div class="leer">Noch keine Spiele.</div>'
+    el2.innerHTML = '<div class="leer">Noch keine Spiele.</div>'
+    return
+  }
+
+  el.innerHTML = liste.map((s, i) => rangItem(s, i, s.punkte, 'Punkte')).join('')
+
+  const mitSpiele = [...liste]
+    .filter(s => s.spiele > 0)
+    .sort((a, b) => {
+      const qa = a.siege / a.spiele, qb = b.siege / b.spiele
+      return qb !== qa ? qb - qa : b.spiele - a.spiele
+    })
+
+  el2.innerHTML = mitSpiele.length
+    ? mitSpiele.map((s, i) => rangItem(s, i, Math.round(s.siege / s.spiele * 100) + '%', 'Siegquote')).join('')
+    : '<div class="leer">Noch keine Spiele.</div>'
 }
 
 // ── Home ─────────────────────────────────────────────────────────
@@ -1181,11 +1308,13 @@ async function renderHome() {
     stel.innerHTML = `
       <div class="sp-sub" style="line-height:1.8">
         Runde ${st.aktuelle_runde} von ${st.gesamt_runden}<br>
-        Modus: ${st.modus === 'ranked' ? '⚖️ Ranked' : st.modus === 'americano' ? '🏆 Americano' : '🎲 Zufällig'}
+        Modus: ${st.modus === 'ranked' ? '⚖️ Ranked' : '🎲 Zufällig'}${Z.americano_modus ? ' · 🏆 Americano' : ''}
       </div>`
   } else {
     stel.innerHTML = '<div class="leer" style="padding:8px 0">Kein aktives Turnier.</div>'
   }
+
+  document.getElementById('admin-einstellungen-btn').style.display = Z.ist_admin ? 'block' : 'none'
 }
 
 // ── Init ─────────────────────────────────────────────────────────

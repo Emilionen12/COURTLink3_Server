@@ -129,6 +129,7 @@ def initialisiere_db():
         "admin_account_id TEXT",
         "ist_plus INTEGER DEFAULT 0",
         "plus_bis TEXT DEFAULT NULL",
+        "americano_modus INTEGER DEFAULT 1",
     ]:
         try:
             c.execute(f"ALTER TABLE teams ADD COLUMN {col_def}")
@@ -210,9 +211,23 @@ def team_passwort_pruefen(team, passwort):
 
 def team_per_id(tid):
     conn = verbindung()
-    row  = conn.execute("SELECT id,name,code,admin_account_id FROM teams WHERE id=?", (tid,)).fetchone()
+    row  = conn.execute("SELECT id,name,code,admin_account_id,americano_modus FROM teams WHERE id=?", (tid,)).fetchone()
     conn.close()
     return dict(row) if row else None
+
+
+def americano_status_laden(team_id):
+    conn = verbindung()
+    row = conn.execute("SELECT americano_modus FROM teams WHERE id=?", (team_id,)).fetchone()
+    conn.close()
+    return row['americano_modus'] if row else 1
+
+
+def americano_status_setzen(team_id, wert):
+    conn = verbindung()
+    conn.execute("UPDATE teams SET americano_modus=? WHERE id=?", (int(wert), team_id))
+    conn.commit()
+    conn.close()
 
 
 # ══ Accounts ═══════════════════════════════════════════════════════
@@ -526,15 +541,15 @@ def spieltag_erstellen(team_id, modus, spieler_ids):
     if len(spieler_liste) % 2 != 0:
         conn.close()
         return None, "Gerade Anzahl an Spielern nötig"
-    if modus == 'americano' and len(spieler_liste) % 4 != 0:
+    team_row = conn.execute("SELECT americano_modus FROM teams WHERE id=?", (team_id,)).fetchone()
+    americano_an = (team_row['americano_modus'] == 1) if team_row else True
+
+    if americano_an and len(spieler_liste) % 4 != 0:
         conn.close()
-        return None, "Americano benötigt 4, 8 oder 12 Spieler (gerade Anzahl von 2er-Teams)"
+        return None, "Americano-Modus ist aktiv — bitte genau 4, 8 oder 12 Spieler wählen"
 
-    # 2er-Teams bilden (Americano nutzt zufällige Formation)
-    formations_modus = 'random' if modus == 'americano' else modus
-    padel_teams = _mische_teams(spieler_liste, formations_modus)
+    padel_teams = _mische_teams(spieler_liste, modus)
 
-    # Round-Robin-Plan für Gesamtrunden-Berechnung (gilt auch für Americano)
     runden_plan = _round_robin_schedule(padel_teams)
     gesamt_runden = len(runden_plan)
 
@@ -544,8 +559,8 @@ def spieltag_erstellen(team_id, modus, spieler_ids):
         (st_id, team_id, modus, gesamt_runden)
     )
 
-    # Americano: nur Runde 1 jetzt speichern; Round-Robin: alle Runden sofort
-    runden_zum_speichern = [runden_plan[0]] if modus == 'americano' else runden_plan
+    # Americano AN: nur Runde 1 speichern; Americano AUS: alle Runden sofort
+    runden_zum_speichern = [runden_plan[0]] if americano_an else runden_plan
     for runden_nr, runde in enumerate(runden_zum_speichern, start=1):
         for (t1, t2) in runde:
             mid = str(uuid.uuid4())[:8]
@@ -658,17 +673,21 @@ def ergebnis_eintragen(match_id, tore1, tore2):
     ).fetchone()[0]
 
     naechste_runde_bereit = False
+    naechste_runde_nr = None
     if offen == 0 and st['aktuelle_runde'] < st['gesamt_runden']:
-        # Nächste Runde freischalten
-        conn.execute(
-            "UPDATE spieltage SET aktuelle_runde=aktuelle_runde+1 WHERE id=?",
-            (m['spieltag_id'],)
-        )
-        conn.commit()
+        team_row = conn.execute("SELECT americano_modus FROM teams WHERE id=?", (st['team_id'],)).fetchone()
+        conn.close()
+        if team_row and team_row['americano_modus'] == 1:
+            spieltag_runde_generieren(m['spieltag_id'])
+        conn2 = verbindung()
+        conn2.execute("UPDATE spieltage SET aktuelle_runde=aktuelle_runde+1 WHERE id=?", (m['spieltag_id'],))
+        conn2.commit()
+        conn2.close()
         naechste_runde_bereit = True
-
-    conn.close()
-    return naechste_runde_bereit
+        naechste_runde_nr = st['aktuelle_runde'] + 1
+    else:
+        conn.close()
+    return naechste_runde_bereit, naechste_runde_nr
 
 
 def ergebnisse_eintragen_bulk(ergebnisse):
@@ -705,6 +724,7 @@ def ergebnisse_eintragen_bulk(ergebnisse):
     conn.close()
 
     naechste_runde = False
+    naechste_runde_nr = None
     if spieltag_id:
         conn2 = verbindung()
         st    = dict(conn2.execute("SELECT * FROM spieltage WHERE id=?", (spieltag_id,)).fetchone())
@@ -712,18 +732,20 @@ def ergebnisse_eintragen_bulk(ergebnisse):
             "SELECT COUNT(*) FROM matches WHERE spieltag_id=? AND runde=? AND status='offen'",
             (spieltag_id, st['aktuelle_runde'])
         ).fetchone()[0]
+        team_row = conn2.execute("SELECT americano_modus FROM teams WHERE id=?", (st['team_id'],)).fetchone()
+        americano_an = (team_row['americano_modus'] == 1) if team_row else True
         conn2.close()
         if offen == 0 and st['aktuelle_runde'] < st['gesamt_runden']:
-            # Americano: nächste Runde dynamisch generieren bevor Runde hochgezählt wird
-            if st['modus'] == 'americano':
+            if americano_an:
                 spieltag_runde_generieren(spieltag_id)
             conn3 = verbindung()
             conn3.execute("UPDATE spieltage SET aktuelle_runde=aktuelle_runde+1 WHERE id=?", (spieltag_id,))
             conn3.commit()
             conn3.close()
             naechste_runde = True
+            naechste_runde_nr = st['aktuelle_runde'] + 1
 
-    return naechste_runde
+    return naechste_runde, naechste_runde_nr
 
 
 def spieltag_archivieren(spieltag_id):

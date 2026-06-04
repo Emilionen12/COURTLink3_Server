@@ -21,6 +21,7 @@ from datenbank import (
     account_alias_aendern,
     account_ist_admin, team_admin_aendern, team_mitglieder_accounts,
     admin_statistiken, team_ist_plus,
+    americano_status_laden, americano_status_setzen,
 )
 
 ADMIN_MASTER_PASSWORT = "7886_Som2025!"
@@ -333,10 +334,10 @@ def api_ergebnis():
     else:
         ergebnisse = [d]
     try:
-        naechste = ergebnisse_eintragen_bulk(ergebnisse)
+        naechste, runde_nr = ergebnisse_eintragen_bulk(ergebnisse)
     except ValueError as e:
         return jsonify({"fehler": str(e)}), 400
-    return jsonify({"ok": True, "naechste_runde": naechste})
+    return jsonify({"ok": True, "naechste_runde": naechste, "runde_nr": runde_nr})
 
 
 @app.route("/api/spieltag/beenden", methods=["POST"])
@@ -369,6 +370,27 @@ def api_team_mitglieder():
     if not team_id() or not account_id():
         return jsonify({"fehler": "Nicht eingeloggt"}), 401
     return jsonify(team_mitglieder_accounts(team_id()))
+
+
+@app.route("/api/team/<tid>/einstellungen")
+def api_team_einstellungen(tid):
+    if not team_id() or tid != team_id():
+        return jsonify({"fehler": "Kein Zugriff"}), 403
+    return jsonify({
+        "americano_modus": americano_status_laden(tid),
+        "ist_admin": account_ist_admin(account_id(), tid) if account_id() else False,
+    })
+
+
+@app.route("/api/team/<tid>/americano", methods=["POST"])
+def api_team_americano(tid):
+    if not team_id() or tid != team_id():
+        return jsonify({"fehler": "Nicht eingeloggt"}), 401
+    if not account_ist_admin(account_id(), tid):
+        return jsonify({"fehler": "Nur der Admin kann den Americano-Modus ändern"}), 403
+    d = request.get_json()
+    americano_status_setzen(tid, d.get("wert", 1))
+    return jsonify({"ok": True})
 
 
 @app.route("/api/team/<tid>/admin/uebertragen", methods=["POST"])
