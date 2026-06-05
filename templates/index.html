@@ -171,7 +171,7 @@
 <!-- ════════════════════════════════════════════════════════════ -->
 <div id="s-login" class="screen aktiv">
   <div class="login-box">
-    <div class="logo-gross">Court Link</div>
+    <div class="logo-gross">Courtlink</div>
     <div class="logo-sub">PADEL · TEAM MANAGER</div>
 
     <div class="login-tabs">
@@ -511,7 +511,7 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
-        <p class="hinweis">Gewinner-Teams spielen ab Runde 2 gegen Verlierer Teams. Sorgt unter der annahme, dass die Gewinner-Teams die besseren sind dafür, dass das Finale am Ende stattfindet.</p>
+        <p class="hinweis">Gewinner-Teams spielen ab Runde 2 gegen Verlierer-Teams. Sorgt unter der Annahme, dass die Gewinner-Teams die besseren sind, dafür, dass das Finale am Ende stattfindet.</p>
         <div id="m-final-match" class="meldung" style="margin-top:6px"></div>
       </div>
 
@@ -1016,7 +1016,7 @@ function renderSpielerSeite() {
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0">
         ${s.ist_gast ? `<button class="btn-ghost" style="color:var(--gast);border-color:rgba(255,152,0,.3)" onclick="claimCodeAnzeigen('${s.id}')">Code</button>` : ''}
-        ${Z.ist_admin ? `<button class="btn-ghost" onclick="if(confirm('${s.alias} wirklich entfernen und den Fortschritt Löschen?')) spielerDel('${s.id}')">✕</button>` : ''}
+        ${Z.ist_admin ? `<button class="btn-ghost" onclick="if(confirm('${s.alias} wirklich entfernen und den Fortschritt löschen?')) spielerDel('${s.id}')">✕</button>` : ''}
       </div>
     </div>
   `).join('')

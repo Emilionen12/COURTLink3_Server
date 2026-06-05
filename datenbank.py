@@ -8,7 +8,7 @@ import random
 import string
 import json
 from datetime import datetime
-from itertools import combinations
+
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 
@@ -498,7 +498,7 @@ def _mische_teams(spieler_liste, modus):
         sortiert = sorted(spieler_liste, key=lambda s: s['punkte'], reverse=True)
         obere    = sortiert[:n];  random.shuffle(obere)
         untere   = sortiert[n:];  random.shuffle(untere)
-        return [[obere[i], untere[i]] for i in range(n)]            # gutes ranked systhem, soweit ich das beurteilen kann
+        return [[obere[i], untere[i]] for i in range(n)]            # gutes ranked System, soweit ich das beurteilen kann
     else:
         gem = spieler_liste.copy(); random.shuffle(gem)
         return [[gem[i], gem[i+1]] for i in range(0, len(gem), 2)]
@@ -540,8 +540,8 @@ def _round_robin_schedule(teams):
 def spieltag_erstellen(team_id, modus, spieler_ids):
     """
     Erstellt einen Spieltag.
-    Round-Robin: alle Runden sofort gespeichert.
-    Americano:   nur Runde 1 gespeichert; Folgerunden werden dynamisch nach Ergebnissen generiert.
+    Round-Robin:   alle Runden sofort gespeichert.
+    Final-Match:   nur Runde 1 gespeichert; Folgerunden werden dynamisch nach Ergebnissen generiert.
     """
     conn = verbindung()
     placeholders = ','.join('?' * len(spieler_ids))
@@ -965,7 +965,7 @@ def _final_match_paarungen(teams_sortiert, gespielt_set, gewinner_vs_verlierer=F
 
 
 def spieltag_runde_generieren(spieltag_id):
-    """Generiert dynamisch die nächste Runde für den Americano-Modus."""
+    """Generiert dynamisch die nächste Runde für den Final-Match-Modus."""
     conn = verbindung()
 
     alle = [dict(m) for m in conn.execute(
