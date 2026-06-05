@@ -985,7 +985,7 @@ async function speichereAmericano(wert) {
     return
   }
   Z.americano_modus = wert
-  meldung('m-americano', wert ? 'Americano-Modus aktiviert.' : 'Americano-Modus deaktiviert.', 'erfolg')
+  meldung('m-americano', wert ? 'Final-Match-Modus aktiviert.' : 'Final-Match-Modus deaktiviert.', 'erfolg')
 }
 
 async function claimCodeAnzeigen(sid) {
@@ -1108,43 +1108,57 @@ function renderTurnier() {
   const matches      = st.matches            // nur aktuelle Runde
   const verlauf      = st.alle_ergebnisse   // alle gespielten
 
+  const alleGespielt = matches.length > 0 && matches.every(m => m.status === 'gespielt')
+  const fertig       = aktRunde === gesamtRunden && alleGespielt
+
   // Runden-Header
-  document.getElementById('st-runde-label').textContent = `Runde ${aktRunde}`
-  document.getElementById('st-runde-sub').textContent   = `von ${gesamtRunden} Runden gesamt`
-  document.getElementById('st-runde-pill').textContent  =
-    `${matches.filter(m => m.status === 'gespielt').length}/${matches.length} gespielt`
+  if (fertig) {
+    document.getElementById('st-runde-label').textContent = `Alle ${gesamtRunden} Runden gespielt`
+    document.getElementById('st-runde-sub').textContent   = ''
+    document.getElementById('st-runde-pill').textContent  = ''
+  } else {
+    document.getElementById('st-runde-label').textContent = `Runde ${aktRunde}`
+    document.getElementById('st-runde-sub').textContent   = `von ${gesamtRunden} Runden gesamt`
+    document.getElementById('st-runde-pill').textContent  =
+      `${matches.filter(m => m.status === 'gespielt').length}/${matches.length} gespielt`
+  }
 
-  // Aktuelle Matches
+  // Aktuelle Matches (ausblenden wenn Turnier fertig)
   const mc = document.getElementById('st-matches')
-  mc.innerHTML = matches.map((m, i) => {
-    const gsp = m.status === 'gespielt'
-    return `
-    <div class="match-karte">
-      <div class="match-nr">MATCH ${i+1} · <span class="status-pill ${gsp ? 's-gespielt' : 's-offen'}">${gsp ? 'GESPIELT' : 'OFFEN'}</span></div>
-      <div class="match-grid">
-        <div class="match-team">
-          ${m.team1.map(s => `<div class="match-sp">${av(s,true)}<span style="font-size:12px">${s.alias||s.name}</span></div>`).join('')}
+  if (fertig) {
+    mc.style.display = 'none'
+  } else {
+    mc.style.display = 'block'
+    mc.innerHTML = matches.map((m, i) => {
+      const gsp = m.status === 'gespielt'
+      return `
+      <div class="match-karte">
+        <div class="match-nr">MATCH ${i+1} · <span class="status-pill ${gsp ? 's-gespielt' : 's-offen'}">${gsp ? 'GESPIELT' : 'OFFEN'}</span></div>
+        <div class="match-grid">
+          <div class="match-team">
+            ${m.team1.map(s => `<div class="match-sp">${av(s,true)}<span style="font-size:12px">${s.alias||s.name}</span></div>`).join('')}
+          </div>
+          <div class="vs">VS</div>
+          <div class="match-team r">
+            ${m.team2.map(s => `<div class="match-sp r">${av(s,true)}<span style="font-size:12px">${s.alias||s.name}</span></div>`).join('')}
+          </div>
         </div>
-        <div class="vs">VS</div>
-        <div class="match-team r">
-          ${m.team2.map(s => `<div class="match-sp r">${av(s,true)}<span style="font-size:12px">${s.alias||s.name}</span></div>`).join('')}
-        </div>
-      </div>
-      ${gsp
-        ? `<div class="match-score">${m.tore_team1} : ${m.tore_team2}</div>`
-        : `<div class="ergebnis-row">
-            <input type="number" id="t1-${m.id}" placeholder="0" min="0">
-            <div class="ergebnis-div">:</div>
-            <input type="number" id="t2-${m.id}" placeholder="0" min="0">
-          </div>`
-      }
-    </div>`
-  }).join('')
+        ${gsp
+          ? `<div class="match-score">${m.tore_team1} : ${m.tore_team2}</div>`
+          : `<div class="ergebnis-row">
+              <input type="number" id="t1-${m.id}" placeholder="0" min="0">
+              <div class="ergebnis-div">:</div>
+              <input type="number" id="t2-${m.id}" placeholder="0" min="0">
+            </div>`
+        }
+      </div>`
+    }).join('')
+  }
 
-  // Verlauf bisheriger Runden
+  // Verlauf: wenn fertig alle Runden, sonst nur vergangene
   const verlaufBox = document.getElementById('st-verlauf-box')
   const verlaufEl  = document.getElementById('st-verlauf')
-  const vergangenRunden = verlauf.filter(v => v.runde < aktRunde)
+  const vergangenRunden = fertig ? verlauf : verlauf.filter(v => v.runde < aktRunde)
 
   if (vergangenRunden.length === 0) {
     verlaufBox.style.display = 'none'
@@ -1242,7 +1256,7 @@ function wechsleRankingTab(tab, el) {
   el.classList.add('aktiv')
   document.getElementById('ranking-hint').textContent = tab === 'punkte'
     ? 'Sieg +3 · Unentschieden +1 · Niederlage +0'
-    : 'Siege ÷ Spiele × 100 · Bei Gleichstand entscheiden mehr Spiele'
+    : 'Siege ÷ Spiele · Bei Gleichstand entscheiden mehr Spiele'
   document.getElementById('ranking-liste').style.display            = tab === 'punkte'    ? '' : 'none'
   document.getElementById('ranking-siegquote-liste').style.display  = tab === 'siegquote' ? '' : 'none'
 }

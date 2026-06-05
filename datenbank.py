@@ -151,6 +151,22 @@ def initialisiere_db():
     except Exception:
         pass
 
+    try:
+        c.execute("ALTER TABLE spieler ADD COLUMN turniere INTEGER DEFAULT 0")
+        # Einmaliger Backfill: beendete Turniere pro Spieler aus matches zählen
+        c.execute("""
+            UPDATE spieler SET turniere = (
+                SELECT COUNT(DISTINCT m.spieltag_id)
+                FROM matches m
+                JOIN spieltage st ON st.id = m.spieltag_id
+                WHERE st.status = 'beendet'
+                AND (m.team1_s1_id = spieler.id OR m.team1_s2_id = spieler.id
+                  OR m.team2_s1_id = spieler.id OR m.team2_s2_id = spieler.id)
+            )
+        """)
+    except Exception:
+        pass
+
     conn.commit()
 
     # Datenmigration: admin_account_id für bestehende Teams setzen
@@ -798,6 +814,17 @@ def spieltag_beenden(spieltag_id):
     spieltag_archivieren(spieltag_id)
     conn = verbindung()
     conn.execute("UPDATE spieltage SET status='beendet' WHERE id=?", (spieltag_id,))
+    conn.execute("""
+        UPDATE spieler SET turniere = turniere + 1
+        WHERE id IN (
+            SELECT DISTINCT sid FROM (
+                SELECT team1_s1_id AS sid FROM matches WHERE spieltag_id=?
+                UNION SELECT team1_s2_id             FROM matches WHERE spieltag_id=?
+                UNION SELECT team2_s1_id             FROM matches WHERE spieltag_id=?
+                UNION SELECT team2_s2_id             FROM matches WHERE spieltag_id=?
+            )
+        )
+    """, (spieltag_id, spieltag_id, spieltag_id, spieltag_id))
     conn.commit()
     conn.close()
 
