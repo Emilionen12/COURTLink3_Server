@@ -424,10 +424,8 @@
       <!-- Admin-Verwaltung (nur für Team-Admin) -->
       <div id="admin-verwaltung" class="karte" style="display:none">
         <div class="karte-titel">Team-Verwaltung</div>
-        <p class="hinweis">Als Admin kannst du die Admin-Rolle an ein anderes Mitglied übertragen.</p>
-        <div class="sec-titel" style="margin-bottom:8px">Admin-Rolle übertragen an:</div>
-        <div id="admin-mitglieder-liste"><div class="leer">Lade Mitglieder…</div></div>
-        <div id="m-admin" class="meldung"></div>
+        <p class="hinweis">Als Admin kannst du die Admin-Rolle an ein anderes Mitglied übertragen. Du verlierst damit deine eigenen Admin-Rechte.</p>
+        <button class="btn-outline" onclick="oeffneAdminModal()">Admin-Rolle vergeben →</button>
       </div>
     </div>
 
@@ -520,8 +518,7 @@
       <div class="karte" id="einst-admin-karte" style="display:none">
         <div class="karte-titel">Admin-Rolle übertragen</div>
         <p class="hinweis">Wähle ein Teammitglied dem du die Admin-Rechte übergibst. Du verlierst damit deine eigenen Admin-Rechte.</p>
-        <div id="einst-mitglieder-liste"><div class="leer">Lade Mitglieder…</div></div>
-        <div id="m-einst-admin" class="meldung" style="margin-top:8px"></div>
+        <button class="btn-outline" onclick="oeffneAdminModal()">Admin-Rolle vergeben →</button>
       </div>
     </div>
 
@@ -567,6 +564,25 @@
       <div class="claim-hint">Alle bisherigen Punkte bleiben erhalten!</div>
     </div>
     <button class="btn" onclick="claimTeilen()">Nachricht kopieren & teilen</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!--  ADMIN-MODAL                                                -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="modal-bg" id="admin-modal-bg" onclick="adminModalZu()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <button class="modal-x" onclick="adminModalZu()">✕</button>
+    <div class="modal-titel">Admin-Rolle vergeben</div>
+    <p style="font-size:13px;color:var(--tg);line-height:1.6">
+      Wähle ein Mitglied aus. Du verlierst damit deine eigenen Admin-Rechte.
+    </p>
+    <div id="admin-modal-liste" style="margin:12px 0"></div>
+    <div id="m-admin-modal" class="meldung" style="margin-bottom:8px"></div>
+    <button class="btn" id="admin-modal-btn" onclick="adminUebertragenModal()" disabled
+      style="opacity:.5;transition:.15s">
+      Admin-Rolle vergeben
+    </button>
   </div>
 </div>
 
@@ -890,34 +906,57 @@ async function spielerDel(id) {
   renderSpielerSeite()
 }
 
-async function ladeAdminMitglieder() {
-  if (!Z.ist_admin) return
+function ladeAdminMitglieder() { /* Liste wird jetzt per Modal geladen */ }
+
+async function oeffneAdminModal() {
   const res = await fetch('/api/team/mitglieder')
   const mitglieder = await res.json()
-  const liste = document.getElementById('admin-mitglieder-liste')
   const andere = mitglieder.filter(m => m.id !== Z.account?.id)
+  const liste = document.getElementById('admin-modal-liste')
+  const btn   = document.getElementById('admin-modal-btn')
+  document.getElementById('m-admin-modal').textContent = ''
+  btn.disabled = true
+  btn.style.opacity = '.5'
+  btn.textContent = 'Admin-Rolle vergeben'
+
   if (!andere.length) {
     liste.innerHTML = '<div class="leer">Keine weiteren Mitglieder.</div>'
-    return
+  } else {
+    liste.innerHTML = andere.map(m => `
+      <label style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.07);cursor:pointer">
+        <input type="radio" name="admin-wahl" value="${m.id}" data-alias="${m.alias.replace(/"/g,'&quot;')}"
+          onchange="adminModalAuswahl(this)" style="accent-color:var(--g);width:18px;height:18px;flex-shrink:0">
+        <div>
+          <div class="sp-name">${m.alias}</div>
+        </div>
+      </label>
+    `).join('')
   }
-  liste.innerHTML = andere.map(m => `
-    <div class="spieler-item">
-      <div class="sp-links">
-        <div class="avatar">${(m.alias||'?')[0].toUpperCase()}</div>
-        <div class="sp-name">${m.alias}</div>
-      </div>
-      <button class="btn-ghost" style="color:var(--g);border-color:rgba(0,102,179,.4)"
-        onclick="adminUebertragen('${m.id}','${m.alias}')">
-        Admin übertragen
-      </button>
-    </div>
-  `).join('')
+  document.getElementById('admin-modal-bg').classList.add('offen')
 }
 
-async function adminUebertragen(neuerId, neuerAlias) {
-  if (!confirm(`Wirklich? Du verlierst damit deine Admin-Rechte!\n\nAdmin-Rolle an "${neuerAlias}" übertragen?`)) return
+function adminModalAuswahl(radio) {
+  const btn = document.getElementById('admin-modal-btn')
+  btn.disabled = false
+  btn.style.opacity = '1'
+  btn.textContent = `Admin-Rolle an ${radio.dataset.alias} vergeben`
+}
+
+function adminModalZu() {
+  document.getElementById('admin-modal-bg').classList.remove('offen')
+}
+
+async function adminUebertragenModal() {
+  const radio = document.querySelector('input[name="admin-wahl"]:checked')
+  if (!radio) return
+  const neuerId    = radio.value
+  const neuerAlias = radio.dataset.alias
   const [res, d] = await post(`/api/team/${Z.team.id}/admin/uebertragen`, { neuer_admin_account_id: neuerId })
-  if (!res.ok) { toast(d.fehler || 'Fehler beim Übertragen.'); return }
+  if (!res.ok) {
+    document.getElementById('m-admin-modal').textContent = d.fehler || 'Fehler beim Übertragen.'
+    return
+  }
+  adminModalZu()
   toast(`Admin-Rolle an ${neuerAlias} übertragen.`)
   Z.ist_admin = false
   if (Z.team) Z.team.admin_account_id = neuerId
@@ -935,34 +974,7 @@ async function ladeEinstellungen() {
   document.getElementById('americano-toggle').checked = Z.americano_modus
 
   const adminKarte = document.getElementById('einst-admin-karte')
-  if (Z.ist_admin) {
-    adminKarte.style.display = 'block'
-    ladeAdminMitgliederFuerEinstellungen()
-  } else {
-    adminKarte.style.display = 'none'
-  }
-}
-
-async function ladeAdminMitgliederFuerEinstellungen() {
-  const res = await fetch('/api/team/mitglieder')
-  const mitglieder = await res.json()
-  const liste = document.getElementById('einst-mitglieder-liste')
-  const andere = mitglieder.filter(m => m.id !== Z.account?.id)
-  if (!andere.length) {
-    liste.innerHTML = '<div class="leer">Keine weiteren Mitglieder.</div>'
-    return
-  }
-  liste.innerHTML = andere.map(m => `
-    <div class="spieler-item">
-      <div class="sp-links">
-        <div class="avatar">${(m.alias||'?')[0].toUpperCase()}</div>
-        <div class="sp-name">${m.alias}</div>
-      </div>
-      <button class="btn-ghost" style="color:var(--g);border-color:rgba(0,102,179,.4)"
-        onclick="adminUebertragen('${m.id}','${m.alias}')">
-        Übertragen
-      </button>
-    </div>`).join('')
+  adminKarte.style.display = Z.ist_admin ? 'block' : 'none'
 }
 
 async function speichereAmericano(wert) {

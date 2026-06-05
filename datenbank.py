@@ -1006,10 +1006,19 @@ def account_ist_admin(account_id, team_id):
         "SELECT admin_account_id FROM teams WHERE id=?",
         (team_id,)
     ).fetchone()
-    conn.close()
     if not row:
+        conn.close()
         return False
-    return row['admin_account_id'] == account_id
+    if row['admin_account_id']:
+        conn.close()
+        return row['admin_account_id'] == account_id
+    # Fallback: kein Admin gesetzt → Ersteller (niedrigste rowid) ist Admin
+    first = conn.execute(
+        "SELECT account_id FROM account_team WHERE team_id=? ORDER BY rowid ASC LIMIT 1",
+        (team_id,)
+    ).fetchone()
+    conn.close()
+    return first is not None and first['account_id'] == account_id
 
 
 def team_ist_plus(team_id):
