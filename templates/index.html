@@ -388,7 +388,7 @@
         <div id="h-spieltag"><div class="leer">Kein aktives Turnier</div></div>
         <button class="btn-outline" onclick="zeigeSeite('spieltag')" style="margin-top:10px">Turnier starten →</button>
       </div>
-      <div class="karte" id="admin-einstellungen-btn" style="display:none;cursor:pointer" onclick="zeigeSeite('einstellungen')">
+      <div class="karte" id="einstellungen-btn" style="display:none;cursor:pointer" onclick="zeigeSeite('einstellungen')">
         <div style="display:flex;align-items:center;justify-content:space-between">
           <div class="karte-titel" style="margin:0">Einstellungen</div>
           <span style="color:var(--tg);font-size:20px">⚙️</span>
@@ -435,8 +435,8 @@
       <!-- Turnier starten -->
       <div id="st-start" class="karte">
         <div class="karte-titel">Neues Turnier</div>
-        <div id="st-americano-info" class="info-box" style="display:none">
-          🏆 <strong>Americano aktiv</strong> — Paarungen entstehen dynamisch nach Ergebnis. Bitte genau 4, 8 oder 12 Spieler wählen.
+        <div id="st-final-match-info" class="info-box" style="display:none">
+          🏆 <strong>Final-Match aktiv</strong> — Paarungen entstehen dynamisch nach Ergebnis. Bitte genau 4, 8 oder 12 Spieler wählen.
         </div>
         <div class="sec-titel" style="margin-bottom:8px">Paarungsart Runde 1</div>
         <div class="modus-gruppe">
@@ -507,12 +507,12 @@
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <span style="font-size:14px;color:var(--t)">Final-Match aktiviert</span>
           <label class="toggle-switch">
-            <input type="checkbox" id="americano-toggle" onchange="speichereAmericano(this.checked)">
+            <input type="checkbox" id="final-match-toggle" onchange="speichereFinalMatch(this.checked)">
             <span class="toggle-slider"></span>
           </label>
         </div>
         <p class="hinweis">Gewinner-Teams spielen ab Runde 2 gegen Verlierer Teams. Sorgt unter der annahme, dass die Gewinner-Teams die besseren sind dafür, dass das Finale am Ende stattfindet.</p>
-        <div id="m-americano" class="meldung" style="margin-top:6px"></div>
+        <div id="m-final-match" class="meldung" style="margin-top:6px"></div>
       </div>
 
       <div class="karte" id="einst-admin-karte" style="display:none">
@@ -594,7 +594,7 @@
 <!-- ════════════════════════════════════════════════════════════ -->
 <script>
 
-let Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random', ist_admin:false, americano_modus:true }
+let Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random', ist_admin:false, final_match_modus:true }
 
 // ── Hilfs ────────────────────────────────────────────────────────
 function toast(t) {
@@ -827,8 +827,8 @@ async function profilGastUebernehmen() {
 function appStarten(team, sid) {
   Z.team          = team
   Z.spieler_id    = sid
-  Z.ist_admin     = !!(Z.account && team && Z.account.id === team.admin_account_id)
-  Z.americano_modus = !!(team && team.americano_modus)
+  Z.ist_admin        = !!(Z.account && team && Z.account.id === team.admin_account_id)
+  Z.final_match_modus = !!(team && team.americano_modus)
 
   document.getElementById('h-teamname').textContent = team.name
   document.getElementById('h-code').textContent     = team.code
@@ -842,7 +842,7 @@ function appStarten(team, sid) {
 
 async function abmelden() {
   await fetch('/api/abmelden', { method: 'POST' })
-  Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random', ist_admin:false, americano_modus:true }
+  Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random', ist_admin:false, final_match_modus:true }
   document.getElementById('s-app').classList.remove('aktiv')
   document.getElementById('s-profil').classList.remove('aktiv')
   document.getElementById('s-login').classList.add('aktiv')
@@ -970,22 +970,22 @@ async function ladeEinstellungen() {
   const res = await fetch(`/api/team/${Z.team.id}/einstellungen`)
   const d   = await res.json()
 
-  Z.americano_modus = d.americano_modus === 1
-  document.getElementById('americano-toggle').checked = Z.americano_modus
+  Z.final_match_modus = d.americano_modus === 1
+  document.getElementById('final-match-toggle').checked = Z.final_match_modus
 
   const adminKarte = document.getElementById('einst-admin-karte')
   adminKarte.style.display = Z.ist_admin ? 'block' : 'none'
 }
 
-async function speichereAmericano(wert) {
-  const [res, d] = await post(`/api/team/${Z.team.id}/americano`, { wert: wert ? 1 : 0 })
+async function speichereFinalMatch(wert) {
+  const [res, d] = await post(`/api/team/${Z.team.id}/final-match`, { wert: wert ? 1 : 0 })
   if (!res.ok) {
-    meldung('m-americano', d.fehler || 'Fehler', 'fehler')
-    document.getElementById('americano-toggle').checked = !wert
+    meldung('m-final-match', d.fehler || 'Fehler', 'fehler')
+    document.getElementById('final-match-toggle').checked = !wert
     return
   }
-  Z.americano_modus = wert
-  meldung('m-americano', wert ? 'Final-Match-Modus aktiviert.' : 'Final-Match-Modus deaktiviert.', 'erfolg')
+  Z.final_match_modus = wert
+  meldung('m-final-match', wert ? 'Final-Match-Modus aktiviert.' : 'Final-Match-Modus deaktiviert.', 'erfolg')
 }
 
 async function claimCodeAnzeigen(sid) {
@@ -1051,9 +1051,9 @@ async function ladeSpieltag() {
 }
 
 function renderAuswahlListe() {
-  document.getElementById('st-americano-info').style.display = Z.americano_modus ? 'block' : 'none'
-  document.getElementById('st-hinweis').textContent = Z.americano_modus
-    ? 'Genau 4, 8 oder 12 Spieler wählen (Americano aktiv).'
+  document.getElementById('st-final-match-info').style.display = Z.final_match_modus ? 'block' : 'none'
+  document.getElementById('st-hinweis').textContent = Z.final_match_modus
+    ? 'Genau 4, 8 oder 12 Spieler wählen (Final-Match aktiv).'
     : 'Mind. 4 Spieler (gerade Anzahl).'
   const liste = document.getElementById('st-liste')
   if (!Z.spieler.length) { liste.innerHTML = '<div class="leer">Erst Spieler hinzufügen.</div>'; return }
@@ -1087,8 +1087,8 @@ async function spieltagStarten() {
   const ids = [...document.querySelectorAll('#st-liste input:checked')].map(cb => cb.id.replace('cb-',''))
   if (ids.length < 4)      { meldung('m-st', 'Mindestens 4 Spieler auswählen.', 'fehler'); return }
   if (ids.length % 2 !== 0){ meldung('m-st', 'Gerade Anzahl nötig (4, 6, 8…).', 'fehler'); return }
-  if (Z.americano_modus && ids.length % 4 !== 0) {
-    meldung('m-st', 'Americano-Modus aktiv — bitte genau 4, 8 oder 12 Spieler wählen.', 'fehler'); return
+  if (Z.final_match_modus && ids.length % 4 !== 0) {
+    meldung('m-st', 'Final-Match-Modus aktiv — bitte genau 4, 8 oder 12 Spieler wählen oder Final-Match-Modus deaktivieren.', 'fehler'); return
   }
 
   const [res, d] = await post('/api/spieltag/starten', { spieler_ids: ids, modus: Z.modus })
@@ -1334,13 +1334,13 @@ async function renderHome() {
     stel.innerHTML = `
       <div class="sp-sub" style="line-height:1.8">
         Runde ${st.aktuelle_runde} von ${st.gesamt_runden}<br>
-        Modus: ${st.modus === 'ranked' ? '⚖️ Ranked' : '🎲 Zufällig'}${Z.americano_modus ? ' · 🏆 Americano' : ''}
+        Modus: ${st.modus === 'ranked' ? '⚖️ Ranked' : '🎲 Zufällig'}${Z.final_match_modus ? ' · 🏆 Final-Match' : ''}
       </div>`
   } else {
     stel.innerHTML = '<div class="leer" style="padding:8px 0">Kein aktives Turnier.</div>'
   }
 
-  document.getElementById('admin-einstellungen-btn').style.display = Z.ist_admin ? 'block' : 'none'
+  document.getElementById('einstellungen-btn').style.display = Z.team ? 'block' : 'none'
 }
 
 // ── Init ─────────────────────────────────────────────────────────

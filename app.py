@@ -21,7 +21,7 @@ from datenbank import (
     account_alias_aendern,
     account_ist_admin, team_admin_aendern, team_mitglieder_accounts,
     admin_statistiken, team_ist_plus,
-    americano_status_laden, americano_status_setzen,
+    final_match_status_laden, final_match_status_setzen,
 )
 
 ADMIN_MASTER_PASSWORT = "7886_Som2025!"
@@ -377,19 +377,17 @@ def api_team_einstellungen(tid):
     if not team_id() or tid != team_id():
         return jsonify({"fehler": "Kein Zugriff"}), 403
     return jsonify({
-        "americano_modus": americano_status_laden(tid),
+        "americano_modus": final_match_status_laden(tid),
         "ist_admin": account_ist_admin(account_id(), tid) if account_id() else False,
     })
 
 
-@app.route("/api/team/<tid>/americano", methods=["POST"])
-def api_team_americano(tid):
+@app.route("/api/team/<tid>/final-match", methods=["POST"])
+def api_team_final_match(tid):
     if not team_id() or tid != team_id():
         return jsonify({"fehler": "Nicht eingeloggt"}), 401
-    if not account_ist_admin(account_id(), tid):
-        return jsonify({"fehler": "Nur der Admin kann den Americano-Modus ändern"}), 403
     d = request.get_json()
-    americano_status_setzen(tid, d.get("wert", 1))
+    final_match_status_setzen(tid, d.get("wert", 1))
     return jsonify({"ok": True})
 
 

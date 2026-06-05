@@ -232,14 +232,14 @@ def team_per_id(tid):
     return dict(row) if row else None
 
 
-def americano_status_laden(team_id):
+def final_match_status_laden(team_id):
     conn = verbindung()
     row = conn.execute("SELECT americano_modus FROM teams WHERE id=?", (team_id,)).fetchone()
     conn.close()
     return row['americano_modus'] if row else 1
 
 
-def americano_status_setzen(team_id, wert):
+def final_match_status_setzen(team_id, wert):
     conn = verbindung()
     conn.execute("UPDATE teams SET americano_modus=? WHERE id=?", (int(wert), team_id))
     conn.commit()
@@ -558,11 +558,11 @@ def spieltag_erstellen(team_id, modus, spieler_ids):
         conn.close()
         return None, "Gerade Anzahl an Spielern nötig"
     team_row = conn.execute("SELECT americano_modus FROM teams WHERE id=?", (team_id,)).fetchone()
-    americano_an = (team_row['americano_modus'] == 1) if team_row else True
+    final_match_an = (team_row['americano_modus'] == 1) if team_row else True
 
-    if americano_an and len(spieler_liste) % 4 != 0:
+    if final_match_an and len(spieler_liste) % 4 != 0:
         conn.close()
-        return None, "Americano-Modus ist aktiv — bitte genau 4, 8 oder 12 Spieler wählen"
+        return None, "Final-Match-Modus ist aktiv — bitte genau 4, 8 oder 12 Spieler wählen"
 
     padel_teams = _mische_teams(spieler_liste, modus)
 
@@ -575,8 +575,8 @@ def spieltag_erstellen(team_id, modus, spieler_ids):
         (st_id, team_id, modus, gesamt_runden)
     )
 
-    # Americano AN: nur Runde 1 speichern; Americano AUS: alle Runden sofort
-    runden_zum_speichern = [runden_plan[0]] if americano_an else runden_plan
+    # Final-Match AN: nur Runde 1 speichern; Final-Match AUS: alle Runden sofort
+    runden_zum_speichern = [runden_plan[0]] if final_match_an else runden_plan
     for runden_nr, runde in enumerate(runden_zum_speichern, start=1):
         for (t1, t2) in runde:
             mid = str(uuid.uuid4())[:8]
@@ -749,10 +749,10 @@ def ergebnisse_eintragen_bulk(ergebnisse):
             (spieltag_id, st['aktuelle_runde'])
         ).fetchone()[0]
         team_row = conn2.execute("SELECT americano_modus FROM teams WHERE id=?", (st['team_id'],)).fetchone()
-        americano_an = (team_row['americano_modus'] == 1) if team_row else True
+        final_match_an = (team_row['americano_modus'] == 1) if team_row else True
         conn2.close()
         if offen == 0 and st['aktuelle_runde'] < st['gesamt_runden']:
-            if americano_an:
+            if final_match_an:
                 spieltag_runde_generieren(spieltag_id)
             conn3 = verbindung()
             conn3.execute("UPDATE spieltage SET aktuelle_runde=aktuelle_runde+1 WHERE id=?", (spieltag_id,))
@@ -928,9 +928,9 @@ def spieltag_team_ranking(spieltag_id):
     return sortiert
 
 
-# ══ Americano ══════════════════════════════════════════════════════
+# ══ Final-Match ════════════════════════════════════════════════════
 
-def _americano_paarungen(teams_sortiert, gespielt_set, gewinner_vs_verlierer=False):
+def _final_match_paarungen(teams_sortiert, gespielt_set, gewinner_vs_verlierer=False):
     """
     Greedy-Paarung: Bestes Team bekommt schlechtesten verfügbaren Gegner (gewinner_vs_verlierer=True)
     oder besten verfügbaren Gegner (False).
@@ -1011,7 +1011,7 @@ def spieltag_runde_generieren(spieltag_id):
     ).fetchone()[0]
     naechste_runde = aktuelle_runde + 1
 
-    paarungen = _americano_paarungen(sortiert, gespielt_set, gewinner_vs_verlierer=True)
+    paarungen = _final_match_paarungen(sortiert, gespielt_set, gewinner_vs_verlierer=True)
 
     for (t1, t2) in paarungen:
         mid = str(uuid.uuid4())[:8]
