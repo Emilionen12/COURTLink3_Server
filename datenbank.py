@@ -903,9 +903,10 @@ def spieltag_team_ranking(spieltag_id):
 
 # ══ Americano ══════════════════════════════════════════════════════
 
-def _americano_paarungen(teams_sortiert, gespielt_set):
+def _americano_paarungen(teams_sortiert, gespielt_set, gewinner_vs_verlierer=False):
     """
-    Greedy-Paarung: Bestes Team bekommt besten verfügbaren Gegner.
+    Greedy-Paarung: Bestes Team bekommt schlechtesten verfügbaren Gegner (gewinner_vs_verlierer=True)
+    oder besten verfügbaren Gegner (False).
     Vermeidet Rematches soweit möglich; akzeptiert sie falls keine Alternative existiert.
     teams_sortiert: Liste von (s1_id, s2_id)-Tuples, nach Spieltag-Punkten absteigend.
     gespielt_set:   set von frozenset({frozenset(team1_ids), frozenset(team2_ids)})
@@ -915,14 +916,22 @@ def _americano_paarungen(teams_sortiert, gespielt_set):
     while len(unmatched) >= 2:
         t1 = unmatched.pop(0)
         t1_frozen = frozenset(t1)
-        # Ersten verfügbaren Nicht-Rematch-Partner suchen
-        idx = 0
-        while idx < len(unmatched):
-            if frozenset([t1_frozen, frozenset(unmatched[idx])]) not in gespielt_set:
-                break
-            idx += 1
-        if idx >= len(unmatched):
-            idx = 0  # Alle verbleibenden sind Rematches → ersten nehmen
+        if gewinner_vs_verlierer:
+            # Schlechtesten verfügbaren Nicht-Rematch-Partner suchen
+            idx = len(unmatched) - 1
+            while idx > 0:
+                if frozenset([t1_frozen, frozenset(unmatched[idx])]) not in gespielt_set:
+                    break
+                idx -= 1
+        else:
+            # Besten verfügbaren Nicht-Rematch-Partner suchen
+            idx = 0
+            while idx < len(unmatched):
+                if frozenset([t1_frozen, frozenset(unmatched[idx])]) not in gespielt_set:
+                    break
+                idx += 1
+            if idx >= len(unmatched):
+                idx = 0  # Alle verbleibenden sind Rematches → ersten nehmen
         t2 = unmatched.pop(idx)
         result.append((t1, t2))
     return result
@@ -975,7 +984,7 @@ def spieltag_runde_generieren(spieltag_id):
     ).fetchone()[0]
     naechste_runde = aktuelle_runde + 1
 
-    paarungen = _americano_paarungen(sortiert, gespielt_set)
+    paarungen = _americano_paarungen(sortiert, gespielt_set, gewinner_vs_verlierer=True)
 
     for (t1, t2) in paarungen:
         mid = str(uuid.uuid4())[:8]
