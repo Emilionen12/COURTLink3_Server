@@ -465,7 +465,11 @@ def _sp_ohne_hash(conn, sid):
 def spieler_des_teams(team_id):
     conn = verbindung()
     rows = conn.execute(
-        "SELECT id,name,alias,team_id,ist_gast,punkte,spiele,siege FROM spieler WHERE team_id=? ORDER BY punkte DESC",
+        """SELECT s.id,s.name,s.alias,s.team_id,s.ist_gast,s.punkte,s.spiele,s.siege,
+                  COALESCE(at.ist_admin,0) AS ist_admin
+           FROM spieler s
+           LEFT JOIN account_team at ON at.spieler_id=s.id AND at.team_id=s.team_id
+           WHERE s.team_id=? ORDER BY s.punkte DESC""",
         (team_id,)
     ).fetchall()
     conn.close()

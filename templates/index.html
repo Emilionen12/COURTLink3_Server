@@ -84,6 +84,7 @@
     .sp-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .sp-sub{font-size:11px;color:var(--tg)}
     .gast-badge{display:inline-block;background:rgba(255,152,0,.15);color:var(--gast);border:1px solid rgba(255,152,0,.3);border-radius:4px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:5px;vertical-align:middle}
+    .admin-badge{display:inline-block;background:rgba(255,215,0,.15);color:var(--gold);border:1px solid rgba(255,215,0,.3);border-radius:4px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:5px;vertical-align:middle}
     .spieler-item input[type=checkbox]{width:18px;height:18px;accent-color:var(--g);cursor:pointer;flex-shrink:0}
     .spieler-item.selected{border:1px solid rgba(0,102,179,.3);background:rgba(0,102,179,.05)}
 
@@ -540,7 +541,7 @@
 
   <div class="bottom-nav">
     <div class="nav-item aktiv" onclick="zeigeSeite('home')"><div class="nav-icon">🏠</div>Home</div>
-    <div class="nav-item" onclick="zeigeSeite('spieler')"><div class="nav-icon">👥</div>Spieler</div>
+    <div class="nav-item" onclick="zeigeSeite('spieler')"><div class="nav-icon">👥</div>Team Management</div>
     <div class="nav-item" onclick="zeigeSeite('spieltag')"><div class="nav-icon">🎾</div>Turnier</div>
     <div class="nav-item" onclick="zeigeSeite('ranking')"><div class="nav-icon">🏆</div>Ranking</div>
   </div>
@@ -740,7 +741,7 @@ async function ladeProfil() {
         <div class="sp-links">
           <div class="avatar">${t.name[0].toUpperCase()}</div>
           <div>
-            <div class="sp-name">${t.ist_admin ? '👑 ' : ''}${t.name}</div>
+            <div class="sp-name">${t.name}${t.ist_admin ? '<span class="admin-badge">ADMIN</span>' : ''}</div>
             <div class="sp-sub">Code: ${t.code}</div>
           </div>
         </div>
@@ -1010,7 +1011,7 @@ function renderSpielerSeite() {
       <div class="sp-links">
         ${av(s, false)}
         <div style="min-width:0">
-          <div class="sp-name">${s.alias}${s.ist_gast ? '<span class="gast-badge">GAST</span>' : ''}</div>
+          <div class="sp-name">${s.alias}${s.ist_admin ? '<span class="admin-badge">ADMIN</span>' : ''}${s.ist_gast ? '<span class="gast-badge">GAST</span>' : ''}</div>
           <div class="sp-sub">${s.punkte} Pkt · ${s.spiele} Spiele</div>
         </div>
       </div>
@@ -1062,7 +1063,7 @@ function renderAuswahlListe() {
       <div class="sp-links">
         ${av(s, false)}
         <div>
-          <div class="sp-name">${s.alias}${s.ist_gast ? '<span class="gast-badge">GAST</span>' : ''}</div>
+          <div class="sp-name">${s.alias}${s.ist_admin ? '<span class="admin-badge">ADMIN</span>' : ''}${s.ist_gast ? '<span class="gast-badge">GAST</span>' : ''}</div>
           <div class="sp-sub">${s.punkte} Punkte</div>
         </div>
       </div>
@@ -1275,7 +1276,7 @@ async function ladeRanking() {
       </div>
       ${av(s, false)}
       <div style="flex:1;min-width:0">
-        <div class="sp-name">${s.alias}${s.ist_gast ? '<span class="gast-badge">GAST</span>' : ''}</div>
+        <div class="sp-name">${s.alias}${s.ist_admin ? '<span class="admin-badge">ADMIN</span>' : ''}${s.ist_gast ? '<span class="gast-badge">GAST</span>' : ''}</div>
         <div class="sp-sub">${s.siege} Siege · ${s.spiele} Spiele</div>
       </div>
       <div class="rang-pkt">
