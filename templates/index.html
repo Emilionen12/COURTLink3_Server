@@ -156,6 +156,7 @@
     .toggle-slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
     input:checked+.toggle-slider{background:var(--g)}
     input:checked+.toggle-slider:before{transform:translateX(20px)}
+    input:disabled+.toggle-slider{opacity:.4;cursor:not-allowed}
 
     /* ── Profil Aktions-Buttons ──────────────────────────────────── */
     .pf-aktion-btn{flex:1;background:var(--k2);border:1px solid var(--r);border-radius:12px;padding:12px 6px;cursor:pointer;text-align:center;transition:.2s;display:flex;flex-direction:column;align-items:center;gap:5px}
@@ -439,10 +440,12 @@
         <div id="st-final-match-info" class="info-box" style="display:none">
           🏆 <strong>Final-Match aktiv</strong> — Paarungen entstehen dynamisch nach Ergebnis. Bitte genau 4, 8 oder 12 Spieler wählen.
         </div>
-        <div class="sec-titel" style="margin-bottom:8px">Paarungsart Runde 1</div>
-        <div class="modus-gruppe">
-          <div class="modus-btn aktiv" id="mb-random" onclick="modusWaehlen('random')">🎲 Zufällig</div>
-          <div class="modus-btn" id="mb-ranked" onclick="modusWaehlen('ranked')">⚖️ Ranked<br><span style="font-size:10px;opacity:.7">Stark + Schwach</span></div>
+        <div id="st-modus-wahl">
+          <div class="sec-titel" style="margin-bottom:8px">Paarungsart Runde 1</div>
+          <div class="modus-gruppe">
+            <div class="modus-btn aktiv" id="mb-random" onclick="modusWaehlen('random')">🎲 Zufällig</div>
+            <div class="modus-btn" id="mb-ranked" onclick="modusWaehlen('ranked')">⚖️ Ranked<br><span style="font-size:10px;opacity:.7">Stark + Schwach</span></div>
+          </div>
         </div>
         <div class="sec" style="margin-top:4px">
           <span class="sec-titel">Spieler auswählen</span>
@@ -451,7 +454,7 @@
         <p class="hinweis" id="st-hinweis">Mind. 4 Spieler (gerade Anzahl).</p>
         <div id="st-liste"><div class="leer">Erst Spieler hinzufügen.</div></div>
         <div id="m-st" class="meldung"></div>
-        <button class="btn" onclick="spieltagStarten()" style="margin-top:10px">Turnier starten</button>
+        <button class="btn" id="st-start-btn" onclick="spieltagStarten()" style="margin-top:10px">Turnier starten</button>
         
 
       </div>
@@ -489,6 +492,13 @@
               <div class="leer" style="padding:10px 0">Noch keine Matches gespielt.</div>
             </div>
           </div>
+          <div id="st-spieler-ranking-box" style="display:none">
+            <hr class="div">
+            <div class="sec-titel" style="margin-bottom:8px">Einzelspieler-Ranking (Spieltag)</div>
+            <div id="st-spieler-ranking">
+              <div class="leer" style="padding:10px 0">Noch keine Matches gespielt.</div>
+            </div>
+          </div>
           <hr class="div">
           <button class="btn" onclick="alleErgebnisseSpeichern()" style="margin-bottom:8px">Alle speichern</button>
           <button class="btn btn-rot" onclick="spieltagBeenden()">Turnier beenden</button>
@@ -514,6 +524,19 @@
         </div>
         <p class="hinweis">Gewinner-Teams spielen ab Runde 2 gegen Verlierer-Teams. Sorgt unter der Annahme, dass die Gewinner-Teams die besseren sind, dafür, dass das Finale am Ende stattfindet.</p>
         <div id="m-final-match" class="meldung" style="margin-top:6px"></div>
+
+        <hr class="div">
+
+        <div class="sec-titel" style="margin-bottom:10px">Mixteams-Modus</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-size:14px;color:var(--t)">Mixteams</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="mixteams-toggle" onchange="speichereMixteams(this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <p class="hinweis">Feste Rotation für genau 4 Spieler: in 3 Runden spielt jeder Spieler genau einmal mit jedem anderen zusammen. Schließt den Final-Match-Modus aus (wird beim Aktivieren automatisch deaktiviert).</p>
+        <div id="m-mixteams" class="meldung" style="margin-top:6px"></div>
       </div>
 
       <div class="karte" id="einst-admin-karte" style="display:none">
@@ -595,7 +618,7 @@
 <!-- ════════════════════════════════════════════════════════════ -->
 <script>
 
-let Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random', ist_admin:false, final_match_modus:true }
+let Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random', ist_admin:false, final_match_modus:true, mixteams_modus:false }
 
 // ── Hilfs ────────────────────────────────────────────────────────
 function toast(t) {
@@ -830,6 +853,7 @@ function appStarten(team, sid) {
   Z.spieler_id    = sid
   Z.ist_admin        = !!(Z.account && team && Z.account.id === team.admin_account_id)
   Z.final_match_modus = !!(team && team.americano_modus)
+  Z.mixteams_modus    = !!(team && team.mixteams_modus)
 
   document.getElementById('h-teamname').textContent = team.name
   document.getElementById('h-code').textContent     = team.code
@@ -843,7 +867,7 @@ function appStarten(team, sid) {
 
 async function abmelden() {
   await fetch('/api/abmelden', { method: 'POST' })
-  Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random', ist_admin:false, final_match_modus:true }
+  Z = { account:null, team:null, spieler_id:null, spieler:[], spieltag:null, modus:'random', ist_admin:false, final_match_modus:true, mixteams_modus:false }
   document.getElementById('s-app').classList.remove('aktiv')
   document.getElementById('s-profil').classList.remove('aktiv')
   document.getElementById('s-login').classList.add('aktiv')
@@ -972,7 +996,10 @@ async function ladeEinstellungen() {
   const d   = await res.json()
 
   Z.final_match_modus = d.americano_modus === 1
-  document.getElementById('final-match-toggle').checked = Z.final_match_modus
+  Z.mixteams_modus    = d.mixteams_modus === 1
+  document.getElementById('final-match-toggle').checked  = Z.final_match_modus
+  document.getElementById('final-match-toggle').disabled = Z.mixteams_modus
+  document.getElementById('mixteams-toggle').checked     = Z.mixteams_modus
 
   const adminKarte = document.getElementById('einst-admin-karte')
   adminKarte.style.display = Z.ist_admin ? 'block' : 'none'
@@ -986,7 +1013,29 @@ async function speichereFinalMatch(wert) {
     return
   }
   Z.final_match_modus = wert
+  if (Z.team) Z.team.americano_modus = wert ? 1 : 0
   meldung('m-final-match', wert ? 'Final-Match-Modus aktiviert.' : 'Final-Match-Modus deaktiviert.', 'erfolg')
+}
+
+async function speichereMixteams(wert) {
+  const [res, d] = await post(`/api/team/${Z.team.id}/mixteams-modus`, { aktiv: wert })
+  if (!res.ok) {
+    meldung('m-mixteams', d.fehler || 'Fehler', 'fehler')
+    document.getElementById('mixteams-toggle').checked = !wert
+    return
+  }
+  Z.mixteams_modus = wert
+  if (Z.team) Z.team.mixteams_modus = wert ? 1 : 0
+
+  const fmToggle = document.getElementById('final-match-toggle')
+  fmToggle.disabled = wert
+  if (wert) {
+    Z.final_match_modus = false
+    fmToggle.checked = false
+    if (Z.team) Z.team.americano_modus = 0
+  }
+
+  meldung('m-mixteams', wert ? 'Mixteams-Modus aktiviert.' : 'Mixteams-Modus deaktiviert.', 'erfolg')
 }
 
 async function claimCodeAnzeigen(sid) {
@@ -1052,12 +1101,16 @@ async function ladeSpieltag() {
 }
 
 function renderAuswahlListe() {
-  document.getElementById('st-final-match-info').style.display = Z.final_match_modus ? 'block' : 'none'
-  document.getElementById('st-hinweis').textContent = Z.final_match_modus
-    ? 'Genau 4, 8 oder 12 Spieler wählen (Final-Match aktiv).'
-    : 'Mind. 4 Spieler (gerade Anzahl).'
+  const mixteams = Z.mixteams_modus
+  document.getElementById('st-modus-wahl').style.display = mixteams ? 'none' : 'block'
+  document.getElementById('st-final-match-info').style.display = (!mixteams && Z.final_match_modus) ? 'block' : 'none'
+  document.getElementById('st-hinweis').textContent = mixteams
+    ? 'Genau 4 Spieler auswählen (Mixteams-Modus): jeder spielt einmal mit jedem anderen.'
+    : (Z.final_match_modus
+      ? 'Genau 4, 8 oder 12 Spieler wählen (Final-Match aktiv).'
+      : 'Mind. 4 Spieler (gerade Anzahl).')
   const liste = document.getElementById('st-liste')
-  if (!Z.spieler.length) { liste.innerHTML = '<div class="leer">Erst Spieler hinzufügen.</div>'; return }
+  if (!Z.spieler.length) { liste.innerHTML = '<div class="leer">Erst Spieler hinzufügen.</div>'; zaehlerUpdate(); return }
   liste.innerHTML = Z.spieler.map(s => `
     <div class="spieler-item" id="si-${s.id}" onclick="toggleAuswahl('${s.id}')">
       <div class="sp-links">
@@ -1070,10 +1123,15 @@ function renderAuswahlListe() {
       <input type="checkbox" id="cb-${s.id}" onclick="event.stopPropagation();zaehlerUpdate()">
     </div>
   `).join('')
+  zaehlerUpdate()
 }
 
 function toggleAuswahl(id) {
   const cb = document.getElementById('cb-' + id)
+  if (Z.mixteams_modus && !cb.checked) {
+    const n = document.querySelectorAll('#st-liste input:checked').length
+    if (n >= 4) { toast('Mixteams: bitte genau 4 Spieler auswählen.'); return }
+  }
   cb.checked = !cb.checked
   document.getElementById('si-' + id).classList.toggle('selected', cb.checked)
   zaehlerUpdate()
@@ -1081,15 +1139,28 @@ function toggleAuswahl(id) {
 
 function zaehlerUpdate() {
   const n = document.querySelectorAll('#st-liste input:checked').length
-  document.getElementById('st-anzahl').textContent = n + ' ausgewählt'
+  const btn = document.getElementById('st-start-btn')
+  if (Z.mixteams_modus) {
+    document.getElementById('st-anzahl').textContent = `${n} / 4 Spieler ausgewählt`
+    btn.disabled = (n !== 4)
+    btn.style.opacity = (n !== 4) ? '.5' : '1'
+  } else {
+    document.getElementById('st-anzahl').textContent = n + ' ausgewählt'
+    btn.disabled = false
+    btn.style.opacity = '1'
+  }
 }
 
 async function spieltagStarten() {
   const ids = [...document.querySelectorAll('#st-liste input:checked')].map(cb => cb.id.replace('cb-',''))
-  if (ids.length < 4)      { meldung('m-st', 'Mindestens 4 Spieler auswählen.', 'fehler'); return }
-  if (ids.length % 2 !== 0){ meldung('m-st', 'Gerade Anzahl nötig (4, 6, 8…).', 'fehler'); return }
-  if (Z.final_match_modus && ids.length % 4 !== 0) {
-    meldung('m-st', 'Final-Match-Modus aktiv — bitte genau 4, 8 oder 12 Spieler wählen oder Final-Match-Modus deaktivieren.', 'fehler'); return
+  if (Z.mixteams_modus) {
+    if (ids.length !== 4) { meldung('m-st', 'Bitte genau 4 Spieler auswählen.', 'fehler'); return }
+  } else {
+    if (ids.length < 4)      { meldung('m-st', 'Mindestens 4 Spieler auswählen.', 'fehler'); return }
+    if (ids.length % 2 !== 0){ meldung('m-st', 'Gerade Anzahl nötig (4, 6, 8…).', 'fehler'); return }
+    if (Z.final_match_modus && ids.length % 4 !== 0) {
+      meldung('m-st', 'Final-Match-Modus aktiv — bitte genau 4, 8 oder 12 Spieler wählen oder Final-Match-Modus deaktivieren.', 'fehler'); return
+    }
   }
 
   const [res, d] = await post('/api/spieltag/starten', { spieler_ids: ids, modus: Z.modus })
@@ -1183,33 +1254,66 @@ function renderTurnier() {
     `).join('')
   }
 
-  // Team Ranking
-  fetch('/api/spieltag/' + st.id + '/team_ranking')
-    .then(r => r.json())
-    .then(teams => {
-      const el = document.getElementById('st-team-ranking')
-      if (!el) return
-      if (!teams.length) {
-        el.innerHTML = '<div class="leer" style="padding:10px 0">Noch keine Matches gespielt.</div>'
-        return
-      }
-      const medals = ['🥇','🥈','🥉']
-      el.innerHTML = teams.map((t, i) => `
-        <div class="rang-item" style="margin-bottom:8px">
-          <div class="rang-nr" style="color:${i===0?'var(--gold)':i===1?'var(--silber)':i===2?'var(--bronze)':'var(--tg)'}">
-            ${medals[i] || (i+1)}
+  // Ranking: Mixteams zeigt Einzelspieler-Ranking statt Team-Ranking
+  const istMixteams = st.spielmodus === 'mixteams'
+  document.getElementById('st-team-ranking-box').style.display    = istMixteams ? 'none' : 'block'
+  document.getElementById('st-spieler-ranking-box').style.display = istMixteams ? 'block' : 'none'
+
+  const medals = ['🥇','🥈','🥉']
+
+  if (istMixteams) {
+    fetch('/api/spieltag/' + st.id + '/spieler_ranking')
+      .then(r => r.json())
+      .then(spieler => {
+        const el = document.getElementById('st-spieler-ranking')
+        if (!el) return
+        if (!spieler.length) {
+          el.innerHTML = '<div class="leer" style="padding:10px 0">Noch keine Matches gespielt.</div>'
+          return
+        }
+        el.innerHTML = spieler.map((s, i) => `
+          <div class="rang-item" style="margin-bottom:8px">
+            <div class="rang-nr" style="color:${i===0?'var(--gold)':i===1?'var(--silber)':i===2?'var(--bronze)':'var(--tg)'}">
+              ${medals[i] || (i+1)}
+            </div>
+            <div style="flex:1">
+              <div class="sp-name">${s.alias}</div>
+              <div class="sp-sub">${s.siege} Siege · ${s.spiele} Spiele</div>
+            </div>
+            <div class="rang-pkt">
+              <div class="rang-pkt-zahl">${s.punkte}</div>
+              <div class="rang-pkt-label">Punkte</div>
+            </div>
           </div>
-          <div style="flex:1">
-            <div class="sp-name">${t.spieler.map(s => s.alias).join(' & ')}</div>
-            <div class="sp-sub">${t.siege} Siege · ${t.spiele} Spiele</div>
+        `).join('')
+      })
+  } else {
+    fetch('/api/spieltag/' + st.id + '/team_ranking')
+      .then(r => r.json())
+      .then(teams => {
+        const el = document.getElementById('st-team-ranking')
+        if (!el) return
+        if (!teams.length) {
+          el.innerHTML = '<div class="leer" style="padding:10px 0">Noch keine Matches gespielt.</div>'
+          return
+        }
+        el.innerHTML = teams.map((t, i) => `
+          <div class="rang-item" style="margin-bottom:8px">
+            <div class="rang-nr" style="color:${i===0?'var(--gold)':i===1?'var(--silber)':i===2?'var(--bronze)':'var(--tg)'}">
+              ${medals[i] || (i+1)}
+            </div>
+            <div style="flex:1">
+              <div class="sp-name">${t.spieler.map(s => s.alias).join(' & ')}</div>
+              <div class="sp-sub">${t.siege} Siege · ${t.spiele} Spiele</div>
+            </div>
+            <div class="rang-pkt">
+              <div class="rang-pkt-zahl">${t.punkte}</div>
+              <div class="rang-pkt-label">Punkte</div>
+            </div>
           </div>
-          <div class="rang-pkt">
-            <div class="rang-pkt-zahl">${t.punkte}</div>
-            <div class="rang-pkt-label">Punkte</div>
-          </div>
-        </div>
-      `).join('')
-    })
+        `).join('')
+      })
+  }
 }
 
 // ── Ergebnisse speichern (alle offenen auf einmal) ───────────────
@@ -1335,7 +1439,7 @@ async function renderHome() {
     stel.innerHTML = `
       <div class="sp-sub" style="line-height:1.8">
         Runde ${st.aktuelle_runde} von ${st.gesamt_runden}<br>
-        Modus: ${st.modus === 'ranked' ? '⚖️ Ranked' : '🎲 Zufällig'}${Z.final_match_modus ? ' · 🏆 Final-Match' : ''}
+        Modus: ${st.spielmodus === 'mixteams' ? '🔀 Mixteams' : (st.modus === 'ranked' ? '⚖️ Ranked' : '🎲 Zufällig')}${(st.spielmodus !== 'mixteams' && Z.final_match_modus) ? ' · 🏆 Final-Match' : ''}
       </div>`
   } else {
     stel.innerHTML = '<div class="leer" style="padding:8px 0">Kein aktives Turnier.</div>'

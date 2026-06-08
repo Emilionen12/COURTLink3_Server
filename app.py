@@ -22,6 +22,8 @@ from datenbank import (
     account_ist_admin, team_admin_aendern, team_mitglieder_accounts,
     admin_statistiken, team_ist_plus,
     final_match_status_laden, final_match_status_setzen,
+    mixteams_modus_laden, mixteams_modus_setzen,
+    spieltag_spieler_ranking,
 )
 
 ADMIN_MASTER_PASSWORT = "7886_Som2025!"
@@ -354,6 +356,13 @@ def api_spieltag_team_ranking(st_id):
     return jsonify(spieltag_team_ranking(st_id))
 
 
+@app.route("/api/spieltag/<st_id>/spieler_ranking")
+def api_spieltag_spieler_ranking(st_id):
+    if not team_id():
+        return jsonify({"fehler": "Nicht eingeloggt"}), 401
+    return jsonify(spieltag_spieler_ranking(st_id))
+
+
 @app.route("/api/spieltag/archiv")
 def api_spieltag_archiv():
     if not team_id():
@@ -378,6 +387,7 @@ def api_team_einstellungen(tid):
         return jsonify({"fehler": "Kein Zugriff"}), 403
     return jsonify({
         "americano_modus": final_match_status_laden(tid),
+        "mixteams_modus": mixteams_modus_laden(tid),
         "ist_admin": account_ist_admin(account_id(), tid) if account_id() else False,
     })
 
@@ -387,7 +397,18 @@ def api_team_final_match(tid):
     if not team_id() or tid != team_id():
         return jsonify({"fehler": "Nicht eingeloggt"}), 401
     d = request.get_json()
-    final_match_status_setzen(tid, d.get("wert", 1))
+    fehler = final_match_status_setzen(tid, d.get("wert", 1))
+    if fehler:
+        return jsonify({"fehler": fehler}), 400
+    return jsonify({"ok": True})
+
+
+@app.route("/api/team/<tid>/mixteams-modus", methods=["POST"])
+def api_team_mixteams_modus(tid):
+    if not team_id() or tid != team_id():
+        return jsonify({"fehler": "Nicht eingeloggt"}), 401
+    d = request.get_json()
+    mixteams_modus_setzen(tid, bool(d.get("aktiv")))
     return jsonify({"ok": True})
 
 

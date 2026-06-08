@@ -130,9 +130,20 @@ def initialisiere_db():
         "ist_plus INTEGER DEFAULT 0",
         "plus_bis TEXT DEFAULT NULL",
         "americano_modus INTEGER DEFAULT 1",
+        "mixteams_modus INTEGER DEFAULT 0",
     ]:
         try:
             c.execute(f"ALTER TABLE teams ADD COLUMN {col_def}")
+        except Exception:
+            pass
+
+    for col_def in ["spielmodus TEXT DEFAULT 'standard'"]:
+        try:
+            c.execute(f"ALTER TABLE spieltage ADD COLUMN {col_def}")
+        except Exception:
+            pass
+        try:
+            c.execute(f"ALTER TABLE spieltag_archiv ADD COLUMN {col_def}")
         except Exception:
             pass
 
@@ -227,7 +238,7 @@ def team_passwort_pruefen(team, passwort):
 
 def team_per_id(tid):
     conn = verbindung()
-    row  = conn.execute("SELECT id,name,code,admin_account_id,americano_modus FROM teams WHERE id=?", (tid,)).fetchone()
+    row  = conn.execute("SELECT id,name,code,admin_account_id,americano_modus,mixteams_modus FROM teams WHERE id=?", (tid,)).fetchone()
     conn.close()
     return dict(row) if row else None
 
@@ -241,7 +252,30 @@ def final_match_status_laden(team_id):
 
 def final_match_status_setzen(team_id, wert):
     conn = verbindung()
+    if int(wert) == 1:
+        row = conn.execute("SELECT mixteams_modus FROM teams WHERE id=?", (team_id,)).fetchone()
+        if row and row['mixteams_modus'] == 1:
+            conn.close()
+            return "Final-Match kann nicht aktiviert werden, solange Mixteams-Modus aktiv ist"
     conn.execute("UPDATE teams SET americano_modus=? WHERE id=?", (int(wert), team_id))
+    conn.commit()
+    conn.close()
+    return None
+
+
+def mixteams_modus_laden(team_id):
+    conn = verbindung()
+    row = conn.execute("SELECT mixteams_modus FROM teams WHERE id=?", (team_id,)).fetchone()
+    conn.close()
+    return row['mixteams_modus'] if row else 0
+
+
+def mixteams_modus_setzen(team_id, aktiv):
+    conn = verbindung()
+    if aktiv:
+        conn.execute("UPDATE teams SET mixteams_modus=1, americano_modus=0 WHERE id=?", (team_id,))
+    else:
+        conn.execute("UPDATE teams SET mixteams_modus=0 WHERE id=?", (team_id,))
     conn.commit()
     conn.close()
 
@@ -555,13 +589,51 @@ def spieltag_erstellen(team_id, modus, spieler_ids):
     ).fetchall()
     spieler_liste = [dict(r) for r in rows]
 
+    team_row = conn.execute("SELECT americano_modus,mixteams_modus FROM teams WHERE id=?", (team_id,)).fetchone()
+    mixteams_an = (team_row['mixteams_modus'] == 1) if team_row else False
+
+    if mixteams_an:
+        if len(spieler_ids) != 4:
+            conn.close()
+            return None, "Mixteams-Modus erfordert genau 4 Spieler"
+        nach_id = {s['id']: s for s in spieler_liste}
+        geordnet = [nach_id[sid] for sid in spieler_ids if sid in nach_id]
+        if len(geordnet) != 4:
+            conn.close()
+            return None, "Ungültige Spielerauswahl"
+
+        a, b, c, d = geordnet
+        runden_plan = [
+            [([a, b], [c, d])],
+            [([a, c], [b, d])],
+            [([a, d], [b, c])],
+        ]
+        gesamt_runden = len(runden_plan)
+
+        st_id = str(uuid.uuid4())[:8]
+        conn.execute(
+            "INSERT INTO spieltage (id,team_id,modus,spielmodus,aktuelle_runde,gesamt_runden) VALUES (?,?,?,?,1,?)",
+            (st_id, team_id, modus, 'mixteams', gesamt_runden)
+        )
+        for runden_nr, runde in enumerate(runden_plan, start=1):
+            for (t1, t2) in runde:
+                mid = str(uuid.uuid4())[:8]
+                conn.execute("""
+                    INSERT INTO matches
+                    (id,spieltag_id,runde,team1_s1_id,team1_s2_id,team2_s1_id,team2_s2_id)
+                    VALUES (?,?,?,?,?,?,?)
+                """, (mid, st_id, runden_nr, t1[0]['id'], t1[1]['id'], t2[0]['id'], t2[1]['id']))
+
+        conn.commit()
+        conn.close()
+        return _spieltag_details(st_id), None
+
     if len(spieler_liste) < 4:
         conn.close()
         return None, "Mindestens 4 Spieler für ein Turnier nötig"
     if len(spieler_liste) % 2 != 0:
         conn.close()
         return None, "Gerade Anzahl an Spielern nötig"
-    team_row = conn.execute("SELECT americano_modus FROM teams WHERE id=?", (team_id,)).fetchone()
     final_match_an = (team_row['americano_modus'] == 1) if team_row else True
 
     if final_match_an and len(spieler_liste) % 4 != 0:
@@ -798,16 +870,17 @@ def spieltag_archivieren(spieltag_id):
     spieler_ranking.sort(key=lambda s: (s['punkte'], s['siege']), reverse=True)
     conn.close()
 
-    team_ranking = spieltag_team_ranking(spieltag_id)
+    ist_mixteams = st['spielmodus'] == 'mixteams'
+    team_ranking = [] if ist_mixteams else spieltag_team_ranking(spieltag_id)
 
     conn2 = verbindung()
     archiv_id  = str(uuid.uuid4())[:8]
     beendet_am = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     conn2.execute(
         """INSERT INTO spieltag_archiv
-           (id, spieltag_id, team_id, modus, gesamt_runden, ranking_json, teams_json, beendet_am)
-           VALUES (?,?,?,?,?,?,?,?)""",
-        (archiv_id, spieltag_id, st['team_id'], st['modus'], st['gesamt_runden'],
+           (id, spieltag_id, team_id, modus, spielmodus, gesamt_runden, ranking_json, teams_json, beendet_am)
+           VALUES (?,?,?,?,?,?,?,?,?)""",
+        (archiv_id, spieltag_id, st['team_id'], st['modus'], st['spielmodus'], st['gesamt_runden'],
          json.dumps(spieler_ranking), json.dumps(team_ranking), beendet_am)
     )
     conn2.commit()
@@ -930,6 +1003,52 @@ def spieltag_team_ranking(spieltag_id):
     # Sortiert nach Punkten, dann Siegen
     sortiert = sorted(teams.values(), key=lambda t: (t['punkte'], t['siege']), reverse=True)
     return sortiert
+
+
+def spieltag_spieler_ranking(spieltag_id):
+    """
+    Berechnet das Einzelspieler-Ranking für einen Spieltag (z.B. für Mixteams).
+    Wertet alle gespielten Matches dieses Spieltags aus und summiert
+    Punkte/Siege/Spiele pro Spieler — unabhängig von der kumulativen Statistik.
+    """
+    conn = verbindung()
+
+    matches = conn.execute(
+        "SELECT * FROM matches WHERE spieltag_id=? AND status='gespielt'",
+        (spieltag_id,)
+    ).fetchall()
+
+    spieler = {}
+
+    def sp_eintrag(sid):
+        if sid not in spieler:
+            r = conn.execute("SELECT alias, ist_gast FROM spieler WHERE id=?", (sid,)).fetchone()
+            info = dict(r) if r else {'alias': '?', 'ist_gast': 0}
+            spieler[sid] = {**info, 'id': sid, 'punkte': 0, 'siege': 0, 'spiele': 0}
+        return spieler[sid]
+
+    for m in matches:
+        m = dict(m)
+
+        if m['tore_team1'] > m['tore_team2']:
+            p1, p2, s1, s2 = 3, 0, 1, 0
+        elif m['tore_team2'] > m['tore_team1']:
+            p1, p2, s1, s2 = 0, 3, 0, 1
+        else:
+            p1, p2, s1, s2 = 1, 1, 0, 0
+
+        for sid, p, s in [
+            (m['team1_s1_id'], p1, s1), (m['team1_s2_id'], p1, s1),
+            (m['team2_s1_id'], p2, s2), (m['team2_s2_id'], p2, s2),
+        ]:
+            eintrag = sp_eintrag(sid)
+            eintrag['punkte'] += p
+            eintrag['siege']  += s
+            eintrag['spiele'] += 1
+
+    conn.close()
+
+    return sorted(spieler.values(), key=lambda s: (s['punkte'], s['siege']), reverse=True)
 
 
 # ══ Final-Match ════════════════════════════════════════════════════
