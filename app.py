@@ -24,6 +24,9 @@ from datenbank import (
     final_match_status_laden, final_match_status_setzen,
     mixteams_modus_laden, mixteams_modus_setzen,
     spieltag_spieler_ranking,
+    ensure_team_admins,
+    analyse_spieltage, analyse_duos, analyse_anwesenheit,
+    analyse_duo_haeufigkeit, analyse_beitritte,
 )
 
 ADMIN_MASTER_PASSWORT = "7886_Som2025!"
@@ -32,6 +35,10 @@ ADMIN_PATH = "LoLl"
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(16))
 initialisiere_db()
+# Optionaler Komfort-Fix: behebt fehlende oder ungültige admin_account_id-Einträge.
+# Die App läuft vollständig ohne diesen Aufruf — er ist nur eine Absicherung
+# gegen inkonsistente DB-Zustände, die in der Praxis selten auftreten sollten.
+ensure_team_admins()
 
 # ── Brute-Force Schutz ──────────────────────────────────────────
 admin_login_versuche: dict = {}
@@ -370,6 +377,38 @@ def api_spieltag_archiv():
     # TODO: PLUS-FEATURE — hier später Plus-Check:
     # if not check_plus(team_id()): return jsonify({"fehler": "Plus-Feature"}), 403
     return jsonify(spieltag_archiv_alle(team_id()))
+
+
+# ══ Team-Analyse ════════════════════════════════════════════════════
+
+@app.route("/analyse/spieltage")
+def api_analyse_spieltage():
+    if not team_id(): return jsonify({"fehler": "Nicht eingeloggt"}), 401
+    return jsonify(analyse_spieltage(team_id()))
+
+
+@app.route("/analyse/duos")
+def api_analyse_duos():
+    if not team_id(): return jsonify({"fehler": "Nicht eingeloggt"}), 401
+    return jsonify(analyse_duos(team_id()))
+
+
+@app.route("/analyse/anwesenheit")
+def api_analyse_anwesenheit():
+    if not team_id(): return jsonify({"fehler": "Nicht eingeloggt"}), 401
+    return jsonify(analyse_anwesenheit(team_id()))
+
+
+@app.route("/analyse/duo_haeufigkeit")
+def api_analyse_duo_haeufigkeit():
+    if not team_id(): return jsonify({"fehler": "Nicht eingeloggt"}), 401
+    return jsonify(analyse_duo_haeufigkeit(team_id()))
+
+
+@app.route("/analyse/beitritte")
+def api_analyse_beitritte():
+    if not team_id(): return jsonify({"fehler": "Nicht eingeloggt"}), 401
+    return jsonify(analyse_beitritte(team_id()))
 
 
 # ══ Team-Mitglieder & Admin-Übertragung ════════════════════════════

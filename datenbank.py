@@ -8,6 +8,7 @@ import random
 import string
 import json
 from datetime import datetime
+from itertools import combinations
 
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
@@ -647,8 +648,8 @@ def spieltag_erstellen(team_id, modus, spieler_ids):
 
     st_id = str(uuid.uuid4())[:8]
     conn.execute(
-        "INSERT INTO spieltage (id,team_id,modus,aktuelle_runde,gesamt_runden) VALUES (?,?,?,1,?)",
-        (st_id, team_id, modus, gesamt_runden)
+        "INSERT INTO spieltage (id,team_id,modus,spielmodus,aktuelle_runde,gesamt_runden) VALUES (?,?,?,?,1,?)",
+        (st_id, team_id, modus, 'final' if final_match_an else 'standard', gesamt_runden)
     )
 
     # Final-Match AN: nur Runde 1 speichern; Final-Match AUS: alle Runden sofort
@@ -1148,6 +1149,126 @@ def spieltag_runde_generieren(spieltag_id):
     conn.close()
 
 
+# ══ Team-Analyse ═══════════════════════════════════════════════════
+
+def _team_matches_gespielt(conn, team_id):
+    """Alle gespielten Matches des Teams über alle Spieltage."""
+    return [dict(r) for r in conn.execute(
+        """SELECT m.* FROM matches m
+           JOIN spieltage st ON st.id = m.spieltag_id
+           WHERE st.team_id=? AND m.status='gespielt'""",
+        (team_id,)
+    ).fetchall()]
+
+
+def analyse_spieltage(team_id):
+    """Alle abgeschlossenen Spieltage des Teams mit Ranking-Snapshots, neueste zuerst."""
+    conn = verbindung()
+    rows = conn.execute(
+        """SELECT a.id, a.spieltag_id, a.gesamt_runden, a.beendet_am,
+                  a.ranking_json, a.teams_json, a.spielmodus,
+                  COALESCE(st.modus, a.modus) AS modus
+           FROM spieltag_archiv a
+           LEFT JOIN spieltage st ON st.id = a.spieltag_id
+           WHERE a.team_id=?
+           ORDER BY a.beendet_am DESC""",
+        (team_id,)
+    ).fetchall()
+    conn.close()
+    ergebnis = []
+    for r in rows:
+        r = dict(r)
+        r['ranking'] = json.loads(r.pop('ranking_json'))
+        r['teams']   = json.loads(r.pop('teams_json'))
+        ergebnis.append(r)
+    return ergebnis
+
+
+def analyse_duos(team_id):
+    """Duo-Ranking: Gesamtpunkte & gemeinsame Spiele pro Spieler-Paar."""
+    conn = verbindung()
+    matches = _team_matches_gespielt(conn, team_id)
+    aliase = {r['id']: r['alias'] for r in conn.execute(
+        "SELECT id, alias FROM spieler WHERE team_id=?", (team_id,)
+    ).fetchall()}
+    conn.close()
+
+    duos = {}
+    for m in matches:
+        if m['tore_team1'] > m['tore_team2']:   p1, p2 = 3, 0
+        elif m['tore_team2'] > m['tore_team1']: p1, p2 = 0, 3
+        else:                                    p1, p2 = 1, 1
+        for ids, p in [((m['team1_s1_id'], m['team1_s2_id']), p1),
+                       ((m['team2_s1_id'], m['team2_s2_id']), p2)]:
+            key = tuple(sorted(ids))
+            d = duos.setdefault(key, {'punkte': 0, 'spiele': 0})
+            d['punkte'] += p
+            d['spiele'] += 1
+
+    ergebnis = [
+        {'spieler': [aliase.get(key[0], '?'), aliase.get(key[1], '?')], **d}
+        for key, d in duos.items()
+    ]
+    ergebnis.sort(key=lambda d: (d['punkte'], d['spiele']), reverse=True)
+    return ergebnis
+
+
+def analyse_anwesenheit(team_id):
+    """Alle Spieler des Teams mit Turnier- und Spiel-Anzahl."""
+    conn = verbindung()
+    rows = conn.execute(
+        """SELECT id, name, alias, ist_gast, turniere, spiele
+           FROM spieler WHERE team_id=?
+           ORDER BY turniere DESC, spiele DESC""",
+        (team_id,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def analyse_duo_haeufigkeit(team_id):
+    """Für jede Zweier-Kombination der Team-Spieler: gemeinsame Spiele & Turniere (0 wenn nie zusammen)."""
+    conn = verbindung()
+    spieler = [dict(r) for r in conn.execute(
+        "SELECT id, alias FROM spieler WHERE team_id=?", (team_id,)
+    ).fetchall()]
+    matches = _team_matches_gespielt(conn, team_id)
+    conn.close()
+
+    zaehler = {}
+    for m in matches:
+        for ids in [(m['team1_s1_id'], m['team1_s2_id']),
+                    (m['team2_s1_id'], m['team2_s2_id'])]:
+            key = tuple(sorted(ids))
+            z = zaehler.setdefault(key, {'spiele': 0, 'spieltage': set()})
+            z['spiele'] += 1
+            z['spieltage'].add(m['spieltag_id'])
+
+    ergebnis = []
+    for s1, s2 in combinations(spieler, 2):
+        z = zaehler.get(tuple(sorted([s1['id'], s2['id']])))
+        ergebnis.append({
+            'spieler':  [s1['alias'], s2['alias']],
+            'spiele':   z['spiele'] if z else 0,
+            'turniere': len(z['spieltage']) if z else 0,
+        })
+    ergebnis.sort(key=lambda d: (d['spiele'], d['turniere']), reverse=True)
+    return ergebnis
+
+
+def analyse_beitritte(team_id):
+    """Alle Spieler des Teams chronologisch nach Beitrittsdatum, ältester zuerst."""
+    conn = verbindung()
+    rows = conn.execute(
+        """SELECT id, name, alias, ist_gast, erstellt_am
+           FROM spieler WHERE team_id=?
+           ORDER BY erstellt_am ASC, rowid ASC""",
+        (team_id,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 # ══ Admin & Plus ═══════════════════════════════════════════════════
 
 def account_ist_admin(account_id, team_id):
@@ -1233,6 +1354,64 @@ def team_mitglieder_accounts(team_id):
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+# ── Komfort-Fix beim App-Start ──────────────────────────────────────
+# ensure_team_admins() ist ein optionaler Selbstheilungs-Schritt.
+# Die App funktioniert vollständig ohne ihn. Er behebt nur einen
+# inkonsistenten Datenzustand (fehlendes admin_account_id), der in
+# der Praxis selten auftreten sollte — z.B. wenn frühere Migra-
+# tionsläufe keine gültigen Admin-Einträge anlegen konnten.
+def ensure_team_admins():
+    """
+    Stellt sicher, dass jedes Team mit verknüpften Accounts einen
+    gültigen Admin hat. Läuft einmalig beim App-Start.
+    """
+    conn = verbindung()
+    teams = conn.execute("SELECT id, admin_account_id FROM teams").fetchall()
+    fixed = 0
+
+    for team in teams:
+        tid           = team['id']
+        current_admin = team['admin_account_id']
+
+        # Prüfen ob aktueller Admin wirklich Mitglied des Teams ist
+        if current_admin:
+            ist_mitglied = conn.execute(
+                "SELECT 1 FROM account_team WHERE account_id=? AND team_id=?",
+                (current_admin, tid)
+            ).fetchone()
+            if ist_mitglied:
+                continue  # alles in Ordnung
+
+        # Ältestes account-verknüpftes Mitglied als neuen Admin wählen
+        kandidat = conn.execute(
+            """SELECT at.account_id
+               FROM account_team at
+               JOIN spieler sp ON sp.id = at.spieler_id
+               WHERE at.team_id = ?
+               ORDER BY sp.erstellt_am ASC
+               LIMIT 1""",
+            (tid,)
+        ).fetchone()
+
+        if not kandidat:
+            continue  # kein verknüpfter Account vorhanden — überspringen
+
+        neuer_admin = kandidat['account_id']
+        conn.execute("UPDATE teams SET admin_account_id=? WHERE id=?",
+                     (neuer_admin, tid))
+        conn.execute("UPDATE account_team SET ist_admin=0 WHERE team_id=?", (tid,))
+        conn.execute(
+            "UPDATE account_team SET ist_admin=1 WHERE account_id=? AND team_id=?",
+            (neuer_admin, tid)
+        )
+        fixed += 1
+
+    if fixed:
+        conn.commit()
+    conn.close()
+    return fixed
 
 
 def admin_statistiken():

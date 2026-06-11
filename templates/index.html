@@ -158,6 +158,19 @@
     input:checked+.toggle-slider:before{transform:translateX(20px)}
     input:disabled+.toggle-slider{opacity:.4;cursor:not-allowed}
 
+    /* ── Team Analyse ────────────────────────────────────────────── */
+    .zurueck-btn{background:transparent;border:1px solid var(--r);color:var(--tg);border-radius:8px;font-family:'Barlow',sans-serif;font-size:16px;padding:5px 14px;cursor:pointer;margin-bottom:14px;transition:.15s}
+    .zurueck-btn:active{color:var(--g);border-color:var(--g)}
+    .analyse-titel{font-family:'Barlow Condensed',sans-serif;font-style:italic;font-size:28px;letter-spacing:0;color:var(--g);margin-bottom:16px}
+    .analyse-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .analyse-karte{background:var(--k);border:1px solid #2a2a3a;border-radius:16px;padding:18px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;min-height:100px;transition:.15s}
+    .analyse-karte:active{transform:scale(.97);border-color:var(--g)}
+    .analyse-karte-icon{font-size:26px;line-height:1}
+    .analyse-karte-titel{font-family:'Barlow Condensed',sans-serif;font-style:italic;font-size:16px;color:var(--g)}
+    .analyse-voll{grid-column:1/-1}
+    .modus-badge{display:inline-block;background:rgba(0,102,179,.15);color:var(--g);border:1px solid rgba(0,102,179,.3);border-radius:4px;font-size:10px;font-weight:700;padding:2px 7px;vertical-align:middle}
+    .mitglied-badge{display:inline-block;background:rgba(0,102,179,.15);color:var(--g);border:1px solid rgba(0,102,179,.3);border-radius:4px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:5px;vertical-align:middle}
+
     /* ── Profil Aktions-Buttons ──────────────────────────────────── */
     .pf-aktion-btn{flex:1;background:var(--k2);border:1px solid var(--r);border-radius:12px;padding:12px 6px;cursor:pointer;text-align:center;transition:.2s;display:flex;flex-direction:column;align-items:center;gap:5px}
     .pf-aktion-btn.aktiv{border-color:var(--g);background:rgba(0,102,179,.08)}
@@ -362,7 +375,6 @@
       <div class="header-team" id="h-teamname"> TEAM: — </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-      <div class="code-badge" id="h-code" onclick="codekopieren()">——</div>
       <button class="btn-header" onclick="zurueckZuProfil()">← Dein Account</button>
     </div>
   </div>
@@ -388,7 +400,17 @@
       <div class="karte">
         <div class="karte-titel">Aktives Turnier</div>
         <div id="h-spieltag"><div class="leer">Kein aktives Turnier</div></div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:6px">
+          <span style="font-size:11px;color:var(--tg)">Code:</span>
+          <span id="h-code" onclick="codekopieren()" title="Tippen zum Kopieren" style="font-size:11px;letter-spacing:2px;font-weight:600;color:var(--tg);background:var(--r);border-radius:5px;padding:2px 7px;cursor:pointer">——</span>
+        </div>
         <button class="btn-outline" onclick="zeigeSeite('spieltag')" style="margin-top:10px">Turnier starten →</button>
+      </div>
+      <div class="karte" style="cursor:pointer" onclick="zeigeSeite('analyse')">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="karte-titel" style="margin:0">Analyse</div>
+          <span style="color:var(--tg);font-size:20px">📊</span>
+        </div>
       </div>
       <div class="karte" id="einstellungen-btn" style="display:none;cursor:pointer" onclick="zeigeSeite('einstellungen')">
         <div style="display:flex;align-items:center;justify-content:space-between">
@@ -557,6 +579,106 @@
         <div id="ranking-hint" style="font-size:11px;color:var(--tg);margin-bottom:12px">Sieg +3 · Unentschieden +1 · Niederlage +0</div>
         <div id="ranking-liste"><div class="leer">Noch keine Spiele.</div></div>
         <div id="ranking-siegquote-liste" style="display:none"><div class="leer">Noch keine Spiele.</div></div>
+      </div>
+    </div>
+
+    <!-- TEAM ANALYSE ──────────────────────────────────────────── -->
+    <div id="p-analyse" class="page">
+      <button class="zurueck-btn" onclick="zeigeSeite('home')">←</button>
+      <div class="analyse-titel">Team Analyse</div>
+      <div class="analyse-grid">
+        <div class="analyse-karte" onclick="zeigeSeite('analyse-spieltage')">
+          <div class="analyse-karte-icon">📅</div>
+          <div class="analyse-karte-titel">Alte Spieltage</div>
+        </div>
+        <div class="analyse-karte" onclick="zeigeSeite('analyse-duos')">
+          <div class="analyse-karte-icon">🤝</div>
+          <div class="analyse-karte-titel">Bestes Duo</div>
+        </div>
+        <div class="analyse-karte" onclick="zeigeSeite('analyse-anwesenheit')">
+          <div class="analyse-karte-icon">📋</div>
+          <div class="analyse-karte-titel">Anwesenheit</div>
+        </div>
+        <div class="analyse-karte" onclick="zeigeSeite('analyse-haeufigkeit')">
+          <div class="analyse-karte-icon">🔁</div>
+          <div class="analyse-karte-titel">Duo-Häufigkeit</div>
+        </div>
+        <div class="analyse-karte analyse-voll" onclick="zeigeSeite('analyse-beitritte')">
+          <div class="analyse-karte-icon">🚪</div>
+          <div class="analyse-karte-titel">Spieler-Beitritte</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYSE: Alte Spieltage ───────────────────────────────── -->
+    <div id="p-analyse-spieltage" class="page">
+      <button class="zurueck-btn" onclick="zeigeSeite('analyse')">←</button>
+      <div class="karte">
+        <div class="karte-titel">Alte Spieltage</div>
+        <div id="an-spieltage-liste"><div class="leer">Lade…</div></div>
+      </div>
+    </div>
+
+    <!-- ANALYSE: Spieltag-Detail ──────────────────────────────── -->
+    <div id="p-analyse-spieltag-detail" class="page">
+      <button class="zurueck-btn" onclick="zeigeSeite('analyse-spieltage')">←</button>
+      <div class="karte">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div class="karte-titel" style="margin:0" id="an-detail-titel">Spieltag</div>
+          <span class="modus-badge" id="an-detail-badge">Standard</span>
+        </div>
+        <div class="sp-sub" id="an-detail-sub" style="margin-bottom:14px"></div>
+        <div class="sec-titel" style="margin-bottom:8px">Endranking</div>
+        <div id="an-detail-ranking"></div>
+        <div id="an-detail-teams-box">
+          <hr class="div">
+          <div class="sec-titel" style="margin-bottom:8px">Team-Ranking</div>
+          <div id="an-detail-teams"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYSE: Bestes Duo ───────────────────────────────────── -->
+    <div id="p-analyse-duos" class="page">
+      <button class="zurueck-btn" onclick="zeigeSeite('analyse')">←</button>
+      <div class="karte">
+        <div class="karte-titel">Bestes Duo-Ranking</div>
+        <div id="an-duos-liste"><div class="leer">Lade…</div></div>
+      </div>
+    </div>
+
+    <!-- ANALYSE: Anwesenheit ──────────────────────────────────── -->
+    <div id="p-analyse-anwesenheit" class="page">
+      <button class="zurueck-btn" onclick="zeigeSeite('analyse')">←</button>
+      <div class="karte">
+        <div class="karte-titel">Anwesenheits-Ranking</div>
+        <div class="login-tabs" style="margin-bottom:12px">
+          <div class="login-tab aktiv" onclick="anwesenheitTab('turniere',this)">Turniere</div>
+          <div class="login-tab" onclick="anwesenheitTab('spiele',this)">Spiele</div>
+        </div>
+        <div id="an-anwesenheit-liste"><div class="leer">Lade…</div></div>
+      </div>
+    </div>
+
+    <!-- ANALYSE: Duo-Häufigkeit ───────────────────────────────── -->
+    <div id="p-analyse-haeufigkeit" class="page">
+      <button class="zurueck-btn" onclick="zeigeSeite('analyse')">←</button>
+      <div class="karte">
+        <div class="karte-titel">Duo-Häufigkeit</div>
+        <div class="login-tabs" style="margin-bottom:12px">
+          <div class="login-tab aktiv" onclick="haeufigkeitTab('spiele',this)">Spiele</div>
+          <div class="login-tab" onclick="haeufigkeitTab('turniere',this)">Turniere</div>
+        </div>
+        <div id="an-haeufigkeit-liste"><div class="leer">Lade…</div></div>
+      </div>
+    </div>
+
+    <!-- ANALYSE: Spieler-Beitritte ────────────────────────────── -->
+    <div id="p-analyse-beitritte" class="page">
+      <button class="zurueck-btn" onclick="zeigeSeite('analyse')">←</button>
+      <div class="karte">
+        <div class="karte-titel">Spieler-Beitritte</div>
+        <div id="an-beitritte-liste"><div class="leer">Lade…</div></div>
       </div>
     </div>
 
@@ -890,6 +1012,11 @@ function zeigeSeite(name) {
   if (name === 'spieltag')      ladeSpieltag()
   if (name === 'ranking')       ladeRanking()
   if (name === 'einstellungen') ladeEinstellungen()
+  if (name === 'analyse-spieltage')   ladeAnalyseSpieltage()
+  if (name === 'analyse-duos')        ladeAnalyseDuos()
+  if (name === 'analyse-anwesenheit') ladeAnalyseAnwesenheit()
+  if (name === 'analyse-haeufigkeit') ladeAnalyseHaeufigkeit()
+  if (name === 'analyse-beitritte')   ladeAnalyseBeitritte()
 }
 
 // ── Daten laden ──────────────────────────────────────────────────
@@ -1407,6 +1534,192 @@ async function ladeRanking() {
   el2.innerHTML = mitSpiele.length
     ? mitSpiele.map((s, i) => rangItem(s, i, Math.round(s.siege / s.spiele * 100) + '%', 'Siegquote')).join('')
     : '<div class="leer">Noch keine Spiele.</div>'
+}
+
+// ── Team Analyse ─────────────────────────────────────────────────
+let AN = { spieltage:[], anwesenheit:[], anwesenheitTab:'turniere', haeufigkeit:[], haeufigkeitTab:'spiele' }
+
+function datumDE(s) {
+  if (!s) return '—'
+  const t = s.split(' ')[0].split('-')
+  return t.length === 3 ? `${t[2]}.${t[1]}.${t[0]}` : s
+}
+
+function anModusBadge(st) {
+  if (st.spielmodus === 'mixteams') return 'Mix-Teams'
+  if (st.spielmodus === 'final')    return 'Final-Match'
+  return 'Standard'
+}
+
+function anRangFarbe(i) {
+  return i===0 ? 'var(--gold)' : i===1 ? 'var(--silber)' : i===2 ? 'var(--bronze)' : 'var(--tg)'
+}
+
+const anMedals = ['🥇','🥈','🥉']
+
+async function ladeAnalyseSpieltage() {
+  const res = await fetch('/analyse/spieltage')
+  AN.spieltage = await res.json()
+  const el = document.getElementById('an-spieltage-liste')
+  if (!AN.spieltage.length) { el.innerHTML = '<div class="leer">Noch keine abgeschlossenen Spieltage.</div>'; return }
+  el.innerHTML = AN.spieltage.map((st, i) => `
+    <div class="spieler-item" style="cursor:pointer" onclick="zeigeSpieltagDetail(${i})">
+      <div class="sp-links">
+        <div>
+          <div class="sp-name">${datumDE(st.beendet_am)} <span class="modus-badge">${anModusBadge(st)}</span></div>
+          <div class="sp-sub">${st.gesamt_runden} Runden · ${st.modus === 'ranked' ? '⚖️ Ranked' : '🎲 Zufällig'}</div>
+        </div>
+      </div>
+      <span style="color:var(--tg);font-size:18px">›</span>
+    </div>`).join('')
+}
+
+function zeigeSpieltagDetail(i) {
+  const st = AN.spieltage[i]
+  if (!st) return
+  zeigeSeite('analyse-spieltag-detail')
+  document.getElementById('an-detail-titel').textContent = 'Spieltag ' + datumDE(st.beendet_am)
+  document.getElementById('an-detail-badge').textContent = anModusBadge(st)
+  document.getElementById('an-detail-sub').textContent   =
+    `${st.gesamt_runden} Runden · ${st.modus === 'ranked' ? '⚖️ Ranked' : '🎲 Zufällig'}`
+
+  const rankingEl = document.getElementById('an-detail-ranking')
+  if (!st.ranking || !st.ranking.length) {
+    rankingEl.innerHTML = '<div class="leer">Kein Ranking gespeichert.</div>'
+  } else {
+    rankingEl.innerHTML = st.ranking.map((s, i) => `
+      <div class="rang-item">
+        <div class="rang-nr" style="color:${anRangFarbe(i)}">${anMedals[i] || (i+1)}</div>
+        <div style="flex:1;min-width:0">
+          <div class="sp-name">${s.alias || s.name}</div>
+          <div class="sp-sub">${s.siege} Siege · ${s.spiele} Spiele</div>
+        </div>
+        <div class="rang-pkt">
+          <div class="rang-pkt-zahl">${s.punkte}</div>
+          <div class="rang-pkt-label">Punkte</div>
+        </div>
+      </div>`).join('')
+  }
+
+  const teamsBox = document.getElementById('an-detail-teams-box')
+  if (!st.teams || !st.teams.length) {
+    teamsBox.style.display = 'none'
+  } else {
+    teamsBox.style.display = 'block'
+    document.getElementById('an-detail-teams').innerHTML = st.teams.map((t, i) => `
+      <div class="rang-item">
+        <div class="rang-nr" style="color:${anRangFarbe(i)}">${anMedals[i] || (i+1)}</div>
+        <div style="flex:1;min-width:0">
+          <div class="sp-name">${t.spieler.map(s => s.alias).join(' & ')}</div>
+          <div class="sp-sub">${t.siege} Siege · ${t.spiele} Spiele</div>
+        </div>
+        <div class="rang-pkt">
+          <div class="rang-pkt-zahl">${t.punkte}</div>
+          <div class="rang-pkt-label">Punkte</div>
+        </div>
+      </div>`).join('')
+  }
+}
+
+async function ladeAnalyseDuos() {
+  const res  = await fetch('/analyse/duos')
+  const duos = await res.json()
+  const el   = document.getElementById('an-duos-liste')
+  if (!duos.length) { el.innerHTML = '<div class="leer">Noch keine gespielten Matches.</div>'; return }
+  el.innerHTML = duos.map((d, i) => `
+    <div class="rang-item">
+      <div class="rang-nr" style="color:${anRangFarbe(i)}">${anMedals[i] || (i+1)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="sp-name">${d.spieler.join(' & ')}</div>
+        <div class="sp-sub">${d.spiele} gemeinsame${d.spiele === 1 ? 's' : ''} Spiel${d.spiele === 1 ? '' : 'e'}</div>
+      </div>
+      <div class="rang-pkt">
+        <div class="rang-pkt-zahl">${d.punkte}</div>
+        <div class="rang-pkt-label">Punkte</div>
+      </div>
+    </div>`).join('')
+}
+
+async function ladeAnalyseAnwesenheit() {
+  const res = await fetch('/analyse/anwesenheit')
+  AN.anwesenheit = await res.json()
+  renderAnwesenheit()
+}
+
+function anwesenheitTab(tab, el) {
+  AN.anwesenheitTab = tab
+  document.querySelectorAll('#p-analyse-anwesenheit .login-tab').forEach(t => t.classList.remove('aktiv'))
+  el.classList.add('aktiv')
+  renderAnwesenheit()
+}
+
+function renderAnwesenheit() {
+  const key   = AN.anwesenheitTab
+  const el    = document.getElementById('an-anwesenheit-liste')
+  if (!AN.anwesenheit.length) { el.innerHTML = '<div class="leer">Noch keine Spieler.</div>'; return }
+  const liste = [...AN.anwesenheit].sort((a, b) => b[key] - a[key])
+  el.innerHTML = liste.map((s, i) => `
+    <div class="rang-item">
+      <div class="rang-nr" style="color:${anRangFarbe(i)}">${anMedals[i] || (i+1)}</div>
+      ${av(s, false)}
+      <div style="flex:1;min-width:0">
+        <div class="sp-name">${s.alias}${s.ist_gast ? '<span class="gast-badge">GAST</span>' : ''}</div>
+        <div class="sp-sub">${key === 'turniere' ? s.spiele + ' Spiele' : s.turniere + ' Turniere'}</div>
+      </div>
+      <div class="rang-pkt">
+        <div class="rang-pkt-zahl">${s[key]}</div>
+        <div class="rang-pkt-label">${key === 'turniere' ? 'Turniere' : 'Spiele'}</div>
+      </div>
+    </div>`).join('')
+}
+
+async function ladeAnalyseHaeufigkeit() {
+  const res = await fetch('/analyse/duo_haeufigkeit')
+  AN.haeufigkeit = await res.json()
+  renderHaeufigkeit()
+}
+
+function haeufigkeitTab(tab, el) {
+  AN.haeufigkeitTab = tab
+  document.querySelectorAll('#p-analyse-haeufigkeit .login-tab').forEach(t => t.classList.remove('aktiv'))
+  el.classList.add('aktiv')
+  renderHaeufigkeit()
+}
+
+function renderHaeufigkeit() {
+  const key = AN.haeufigkeitTab
+  const el  = document.getElementById('an-haeufigkeit-liste')
+  if (!AN.haeufigkeit.length) { el.innerHTML = '<div class="leer">Mindestens 2 Spieler nötig.</div>'; return }
+  const liste = [...AN.haeufigkeit].sort((a, b) => b[key] - a[key])
+  el.innerHTML = liste.map((d, i) => `
+    <div class="rang-item" style="${d[key] === 0 ? 'opacity:.55' : ''}">
+      <div class="rang-nr" style="color:${d[key] === 0 ? 'var(--tg)' : anRangFarbe(i)}">${d[key] === 0 ? '–' : (anMedals[i] || (i+1))}</div>
+      <div style="flex:1;min-width:0">
+        <div class="sp-name">${d.spieler.join(' & ')}</div>
+        <div class="sp-sub">${key === 'spiele' ? d.turniere + ' Turniere' : d.spiele + ' Spiele'}</div>
+      </div>
+      <div class="rang-pkt">
+        <div class="rang-pkt-zahl">${d[key]}</div>
+        <div class="rang-pkt-label">${key === 'spiele' ? 'Spiele' : 'Turniere'}</div>
+      </div>
+    </div>`).join('')
+}
+
+async function ladeAnalyseBeitritte() {
+  const res   = await fetch('/analyse/beitritte')
+  const liste = await res.json()
+  const el    = document.getElementById('an-beitritte-liste')
+  if (!liste.length) { el.innerHTML = '<div class="leer">Noch keine Spieler.</div>'; return }
+  el.innerHTML = liste.map(s => `
+    <div class="spieler-item" style="padding:14px 16px">
+      <div class="sp-links">
+        ${av(s, false)}
+        <div style="min-width:0">
+          <div class="sp-name" style="font-size:15px">${s.alias}${s.ist_gast ? '<span class="gast-badge">GAST</span>' : '<span class="mitglied-badge">MITGLIED</span>'}</div>
+          <div class="sp-sub" style="font-size:12px;margin-top:2px">Beigetreten am ${datumDE(s.erstellt_am)}</div>
+        </div>
+      </div>
+    </div>`).join('')
 }
 
 // ── Home ─────────────────────────────────────────────────────────
